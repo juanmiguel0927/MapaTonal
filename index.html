@@ -199,7 +199,6 @@
             <div class="flex-grow relative overflow-auto custom-scrollbar w-full h-full" id="scrollArea">
                 <div id="zoomWrapper" class="relative pointer-events-auto origin-top-left w-full h-full min-w-[1400px] min-h-[900px]"> 
                     
-                    <!-- FONDOS VECTORIALES LIMPIOS -->
                     <div id="zoneBackgrounds" class="absolute inset-0 z-0 pointer-events-none hidden w-full h-full">
                         <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" class="absolute inset-0">
                             <!-- Tónica (Triángulo Central Abajo) -->
@@ -215,7 +214,6 @@
                             <polyline points="50,60 100,100" stroke="rgba(255,255,255,0.15)" stroke-width="0.3" fill="none"></polyline>
                         </svg>
                         
-                        <!-- TEXTOS PUROS Y PEQUEÑOS EN ESQUINAS -->
                         <div class="zone-text text-blue-900 dark:text-blue-500 text-left" style="top: 5%; left: 5%;">SUBDOMINANTE</div>
                         <div class="zone-text text-amber-900 dark:text-amber-500 text-right" style="top: 5%; right: 5%;">DOMINANTE</div>
                         <div class="zone-text text-emerald-900 dark:text-emerald-500 text-center" style="bottom: 5%; left: 50%; transform: translateX(-50%);">TÓNICA</div>
@@ -242,7 +240,6 @@
                     </div>
                 </div>
 
-                <!-- Dropzone más alto (h-20 a h-28) -->
                 <div id="timelineDropzone" class="flex items-center gap-3 overflow-x-auto custom-scrollbar h-[100px] lg:h-[110px] p-2 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-950/50">
                     <div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>
                 </div>
@@ -296,8 +293,11 @@
         let currentProgression = [];
         let isPlayingProgression = false;
         let isDraggingNode = false;
-        
         let activeFilters = { diatonic: true, prep: true, dom: true, dim: true, modal: true };
+        
+        // CORRECCIÓN CRÍTICA: Inicializar el diccionario global para guardar los nodos
+        window.nodeDataMap = {}; 
+        window.playbackTimeouts = []; // Para detener la reproducción a tiempo
 
         const chromaticScale = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
         const normMap = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'Fb':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11, 'Cb':11};
@@ -323,25 +323,20 @@
         function getNotesForChord(rootStr, type, baseOctave = 3) { let rootIndex = normMap[rootStr] || 0; return chordIntervals[type].map(interval => { let absoluteSemi = rootIndex + interval; let oct = baseOctave + Math.floor(absoluteSemi / 12); return chromaticScale[absoluteSemi % 12] + oct; }); }
         function getNoteStr(base, semi, forceFlat = false) { let i = (normMap[base] + semi + 12) % 12; const isFlatKey = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].includes(currentKey); return (forceFlat || isFlatKey) ? ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'][i] : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][i]; }
         function getMidiIdx(pcStr) { let note = pcStr.replace(/\d/g, ''); let idx = chromaticScale.indexOf(note); if(idx === -1) { const enh = {'C#':'Db', 'D#':'Eb', 'F#':'Gb', 'G#':'Ab', 'A#':'Bb', 'Cb':'B', 'E#':'F', 'B#':'C'}; idx = chromaticScale.indexOf(enh[note]); } return idx !== -1 ? idx : 0; }
-        
         function permute(arr) { if (arr.length === 0) return [[]]; let result = []; for (let i = 0; i < arr.length; i++) { let rest = permute(arr.slice(0, i).concat(arr.slice(i + 1))); for (let j = 0; j < rest.length; j++) result.push([arr[i]].concat(rest[j])); } return result; }
         
-        // MODIFICACIÓN: Rango de voces superiores G4-F#5 (Midi 67 a 78) y Bajo C2-C3 (Midi 36 a 48)
         function generateInitialVoicing(targetPCs) { 
             let basePcs = targetPCs.map(getMidiIdx); 
             let voicing = []; 
-            // Iniciar la búsqueda de la primera voz cerca de G4 (midi 67)
             let currentMidi = 67; 
             for(let i=0; i<basePcs.length; i++) { 
                 let pc = basePcs[i]; 
                 let oct = Math.floor(currentMidi / 12); 
                 let cand = pc + oct * 12; 
-                // Asegurarse de que la nota esté al menos en currentMidi
                 if(cand < currentMidi) cand += 12; 
                 voicing.push(cand); 
                 currentMidi = cand; 
             } 
-            // Mantener dentro de G4 a F#5 (67 a 78)
             let topNote = voicing[voicing.length-1]; 
             if (topNote > 78) voicing = voicing.map(v => v - 12); 
             return voicing.sort((a,b) => a-b); 
@@ -375,13 +370,11 @@
                     bestVoicing = currentVoicing.slice(); 
                 } 
             } 
-            // Clamp opcional para asegurar que no se salga mucho del rango deseado
             if(bestVoicing[0] < 60) bestVoicing = bestVoicing.map(v => v + 12);
             if(bestVoicing[bestVoicing.length-1] > 84) bestVoicing = bestVoicing.map(v => v - 12);
             return bestVoicing.sort((a,b) => a-b); 
         }
 
-        // Recuperar posición de LocalStorage
         function getSavedPos(id, defaultX, defaultY) {
             try {
                 let saved = JSON.parse(localStorage.getItem('mapaTonalPositions')) || {};
@@ -401,8 +394,6 @@
 
         function buildTheoryData(key) {
             const r = getReadableRoots(key);
-            
-            // Fila principal dominante sin /I
             let principalDomRow = [
                 { id: `ii_I`, name: r.II, type: 'm7', notes: getNotesForChord(r.II, 'm7'), color: 'blue', deg: 'IIm7' },
                 { id: `v_I`, name: r.V, type: '7', notes: getNotesForChord(r.V, '7'), color: 'red', deg: 'V7' },
@@ -421,7 +412,6 @@
                 { deg: 'VI', root: r.VI, type: 'm7', color: 'emerald' }
             ];
 
-            // Generación algorítmica y Cifrado Weber
             secTargets.forEach((t, idx) => {
                 let v7Root = getNoteStr(t.root, 7);
                 let subRoot = getNoteStr(t.root, 1, true); 
@@ -429,7 +419,6 @@
                 let subIIRoot = getNoteStr(subRoot, 7, true); 
                 let isDestMajor = (t.type === 'maj7' || t.type === '7');
                 
-                // Regla del destino: Si el destino es menor, su preparación (II y bVIm7) es m7(b5)
                 let iiType = isDestMajor ? 'm7' : 'm7(b5)';
                 let subIIType = isDestMajor ? 'm7' : 'm7(b5)';
                 let dimRoot = getNoteStr(t.root, 11);
@@ -449,7 +438,6 @@
                 secDimRows.push([{...nII, id:`ii3_${t.deg}`}, nDim, {...nDest, id:`d5_${t.deg}`}]);
             });
 
-            // Cifrado Weber Modal
             const modalData = [
                 { id: 'IVm7', group: 'modal', name: r.IV, type: 'm7', color: 'purple', deg: 'IVm7', mode: 'Eólico' },
                 { id: 'bVImaj7', group: 'modal', name: r.bVI, type: 'maj7', color: 'purple', deg: 'bVImaj7', mode: 'Eólico' },
@@ -462,55 +450,45 @@
             ];
             modalData.forEach(m => m.notes = getNotesForChord(m.name, m.type));
 
-            // MODIFICACIÓN: Coordenadas XY fieles a la imagen (Racimos alrededor de su destino)
             let globalNodes = {
-                // TÓNICA Y RELATIVOS (Abajo Centro)
                 'Imaj7': { id: 'Imaj7', group: 'diatonic', name: r.I, type: 'maj7', notes: getNotesForChord(r.I, 'maj7'), color: 'emerald', format: 'node-tonic-core', deg: 'Imaj7', ...getSavedPos('Imaj7', 50, 75) },
                 'Im7': { id: 'Im7', group: 'diatonic', name: r.I, type: 'm7', notes: getNotesForChord(r.I, 'm7'), color: 'teal', format: 'node-prep', deg: 'Im7', ...getSavedPos('Im7', 48, 85) },
                 'bIIImaj7': { id: 'bIIImaj7', group: 'diatonic', name: r.bIII, type: 'maj7', notes: getNotesForChord(r.bIII, 'maj7'), color: 'teal', format: 'node-prep', deg: 'bIIImaj7', ...getSavedPos('bIIImaj7', 40, 82) },
 
-                // CÍRCULO DIATÓNICO (Racimos de Tensión)
                 'IVmaj7': { id: 'IVmaj7', group: 'diatonic', name: r.IV, type: 'maj7', notes: getNotesForChord(r.IV, 'maj7'), color: 'blue', format: 'node-main', deg: 'IVmaj7', ...getSavedPos('IVmaj7', 35, 50) },
                 'IIm7': { id: 'IIm7', group: 'diatonic', name: r.II, type: 'm7', notes: getNotesForChord(r.II, 'm7'), color: 'blue', format: 'node-main', deg: 'IIm7', ...getSavedPos('IIm7', 48, 45) },
                 'V7': { id: 'V7', group: 'diatonic', name: r.V, type: '7', notes: getNotesForChord(r.V, '7'), color: 'red', format: 'node-main', deg: 'V7', ...getSavedPos('V7', 62, 50) },
                 'VIm7': { id: 'VIm7', group: 'diatonic', name: r.VI, type: 'm7', notes: getNotesForChord(r.VI, 'm7'), color: 'emerald', format: 'node-main', deg: 'VIm7', ...getSavedPos('VIm7', 68, 75) },
                 'IIIm7': { id: 'IIIm7', group: 'diatonic', name: r.III, type: 'm7', notes: getNotesForChord(r.III, 'm7'), color: 'emerald', format: 'node-main', deg: 'IIIm7', ...getSavedPos('IIIm7', 75, 88) },
                 
-                // SATÉLITES AL I (Alrededor de Imaj7)
                 'SubV7': { id: 'SubV7', group: 'dom', name: r.bII, type: '7', notes: getNotesForChord(r.bII, '7'), color: 'red', format: 'node-prep', deg: 'bII7', ...getSavedPos('SubV7', 56, 60) },
                 'VIIdim7': { id: 'VIIdim7', group: 'dim', name: r.VII, type: 'm7(b5)', notes: getNotesForChord(r.VII, 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)', ...getSavedPos('VIIdim7', 65, 62) },
 
-                // SATÉLITES AL II (Alrededor de IIm7)
                 'V7_II': { id: 'V7_II', group: 'dom', name: getNoteStr(r.II, 7), type: '7', notes: getNotesForChord(getNoteStr(r.II, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/II', ...getSavedPos('V7_II', 45, 30) },
                 'IIm7b5_II': { id: 'IIm7b5_II', group: 'prep', name: getNoteStr(r.II, 2), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.II, 2), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'IIm7(b5)/II', ...getSavedPos('IIm7b5_II', 55, 20) },
                 'bII7_II': { id: 'bII7_II', group: 'dom', name: getNoteStr(r.II, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.II, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/II', ...getSavedPos('bII7_II', 60, 26) },
                 'VIIdim7_II': { id: 'VIIdim7_II', group: 'dim', name: getNoteStr(r.II, 11), type: 'dim7', notes: getNotesForChord(getNoteStr(r.II, 11), 'dim7'), color: 'orange', format: 'node-prep', deg: 'VIIº7/II', ...getSavedPos('VIIdim7_II', 52, 35) },
 
-                // SATÉLITES AL III (Alrededor de IIIm7)
                 'V7_III': { id: 'V7_III', group: 'dom', name: getNoteStr(r.III, 7), type: '7', notes: getNotesForChord(getNoteStr(r.III, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/III', ...getSavedPos('V7_III', 85, 75) },
                 'IIm7b5_III': { id: 'IIm7b5_III', group: 'prep', name: getNoteStr(r.III, 2), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.III, 2), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'IIm7(b5)/III', ...getSavedPos('IIm7b5_III', 92, 65) },
                 'bII7_III': { id: 'bII7_III', group: 'dom', name: getNoteStr(r.III, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.III, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/III', ...getSavedPos('bII7_III', 95, 80) },
                 'VIIdim7_III': { id: 'VIIdim7_III', group: 'dim', name: getNoteStr(r.III, 11), type: 'dim7', notes: getNotesForChord(getNoteStr(r.III, 11), 'dim7'), color: 'orange', format: 'node-prep', deg: 'VIIº7/III', ...getSavedPos('VIIdim7_III', 82, 85) },
 
-                // SATÉLITES AL IV (Alrededor de IVmaj7)
                 'V7_IV': { id: 'V7_IV', group: 'dom', name: getNoteStr(r.IV, 7), type: '7', notes: getNotesForChord(getNoteStr(r.IV, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/IV', ...getSavedPos('V7_IV', 22, 42) },
                 'IIm7_IV': { id: 'IIm7_IV', group: 'prep', name: getNoteStr(r.IV, 2), type: 'm7', notes: getNotesForChord(getNoteStr(r.IV, 2), 'm7'), color: 'purple', format: 'node-prep', deg: 'IIm7/IV', ...getSavedPos('IIm7_IV', 28, 28) },
                 'bII7_IV': { id: 'bII7_IV', group: 'dom', name: getNoteStr(r.IV, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.IV, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/IV', ...getSavedPos('bII7_IV', 35, 32) },
                 'VIIdim7_IV': { id: 'VIIdim7_IV', group: 'dim', name: getNoteStr(r.IV, 11), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.IV, 11), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/IV', ...getSavedPos('VIIdim7_IV', 25, 55) },
 
-                // SATÉLITES AL V (Alrededor de V7)
                 'V7_V': { id: 'V7_V', group: 'dom', name: getNoteStr(r.V, 7), type: '7', notes: getNotesForChord(getNoteStr(r.V, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/V', ...getSavedPos('V7_V', 62, 35) },
                 'IIm7_V': { id: 'IIm7_V', group: 'prep', name: getNoteStr(r.V, 2), type: 'm7', notes: getNotesForChord(getNoteStr(r.V, 2), 'm7'), color: 'purple', format: 'node-prep', deg: 'IIm7/V', ...getSavedPos('IIm7_V', 68, 22) },
                 'bII7_V': { id: 'bII7_V', group: 'dom', name: getNoteStr(r.V, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.V, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/V', ...getSavedPos('bII7_V', 75, 35) },
                 'VIIdim7_V': { id: 'VIIdim7_V', group: 'dim', name: getNoteStr(r.V, 11), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.V, 11), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/V', ...getSavedPos('VIIdim7_V', 75, 48) },
 
-                // SATÉLITES AL VI (Alrededor de VIm7)
                 'V7_VI': { id: 'V7_VI', group: 'dom', name: getNoteStr(r.VI, 7), type: '7', notes: getNotesForChord(getNoteStr(r.VI, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/VI', ...getSavedPos('V7_VI', 75, 62) },
                 'IIm7b5_VI': { id: 'IIm7b5_VI', group: 'prep', name: getNoteStr(r.VI, 2), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.VI, 2), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'IIm7(b5)/VI', ...getSavedPos('IIm7b5_VI', 70, 50) },
                 'bII7_VI': { id: 'bII7_VI', group: 'dom', name: getNoteStr(r.VI, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.VI, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/VI', ...getSavedPos('bII7_VI', 85, 60) },
                 'VIIdim7_VI': { id: 'VIIdim7_VI', group: 'dim', name: getNoteStr(r.VI, 11), type: 'dim7', notes: getNotesForChord(getNoteStr(r.VI, 11), 'dim7'), color: 'orange', format: 'node-prep', deg: 'VIIº7/VI', ...getSavedPos('VIIdim7_VI', 82, 52) },
 
-                // SUBDOMINANTES MENORES (Intercambio Modal - Franja Izquierda)
                 'IVm7': { ...modalData[0], format: 'node-prep', ...getSavedPos('IVm7', 28, 60) },
                 'bVImaj7': { ...modalData[1], format: 'node-prep', ...getSavedPos('bVImaj7', 22, 65) },
                 'bVII7': { ...modalData[2], format: 'node-prep', ...getSavedPos('bVII7', 15, 75) },
@@ -522,40 +500,20 @@
             };
 
             let globalLinks = [
-                // Funciones diatónicas a tónica
-                { from: 'IVmaj7', to: 'Imaj7', color: 'blue' }, 
-                { from: 'V7', to: 'Imaj7', color: 'red' }, 
-                { from: 'SubV7', to: 'Imaj7', color: 'red' },
-                { from: 'VIIdim7', to: 'Imaj7', color: 'orange' },
-                
-                // Relativos menores
-                { from: 'Im7', to: 'bIIImaj7', type: 'dashed' }, 
-                { from: 'bIIImaj7', to: 'Imaj7', type: 'dashed' },
-                
-                // Círculo diatónico
-                { from: 'IIIm7', to: 'VIm7', type: 'dashed' }, 
-                { from: 'VIm7', to: 'IIm7', type: 'dashed' }, 
-                { from: 'IIm7', to: 'V7', type: 'dashed' },
-                
-                // Modales a tónica
+                { from: 'IVmaj7', to: 'Imaj7', color: 'blue' }, { from: 'V7', to: 'Imaj7', color: 'red' }, { from: 'SubV7', to: 'Imaj7', color: 'red' }, { from: 'VIIdim7', to: 'Imaj7', color: 'orange' },
+                { from: 'Im7', to: 'bIIImaj7', type: 'dashed' }, { from: 'bIIImaj7', to: 'Imaj7', type: 'dashed' },
+                { from: 'IIIm7', to: 'VIm7', type: 'dashed' }, { from: 'VIm7', to: 'IIm7', type: 'dashed' }, { from: 'IIm7', to: 'V7', type: 'dashed' },
                 { from: 'IVm7', to: 'Imaj7', color: 'purple' }, { from: 'bVImaj7', to: 'Imaj7', color: 'purple' }, { from: 'bVII7', to: 'Imaj7', color: 'purple' },
                 { from: 'bIImaj7', to: 'Imaj7', color: 'fuchsia' }, { from: 'IIm7b5_modal', to: 'Imaj7', color: 'purple' }, { from: 'bVIIm7', to: 'Imaj7', color: 'fuchsia' },
                 { from: 'bVI7', to: 'Imaj7', color: 'amber' }, { from: 'bVIImaj7', to: 'Imaj7', color: 'orange' }, 
-
-                // Conexiones de satélites II y bVIm7 hacia V7 secundarios y luego a objetivo
-                // Al II
                 { from: 'V7_II', to: 'IIm7', color: 'red' }, { from: 'bII7_II', to: 'IIm7', color: 'red' }, { from: 'VIIdim7_II', to: 'IIm7', color: 'orange' },
                 { from: 'IIm7b5_II', to: 'V7_II', type: 'dashed' }, { from: 'IIm7b5_II', to: 'bII7_II', type: 'dashed' },
-                // Al III
                 { from: 'V7_III', to: 'IIIm7', color: 'red' }, { from: 'bII7_III', to: 'IIIm7', color: 'red' }, { from: 'VIIdim7_III', to: 'IIIm7', color: 'orange' },
                 { from: 'IIm7b5_III', to: 'V7_III', type: 'dashed' }, { from: 'IIm7b5_III', to: 'bII7_III', type: 'dashed' },
-                // Al IV
                 { from: 'V7_IV', to: 'IVmaj7', color: 'red' }, { from: 'bII7_IV', to: 'IVmaj7', color: 'red' }, { from: 'VIIdim7_IV', to: 'IVmaj7', color: 'orange' },
                 { from: 'IIm7_IV', to: 'V7_IV', type: 'dashed' }, { from: 'IIm7_IV', to: 'bII7_IV', type: 'dashed' },
-                // Al V
                 { from: 'V7_V', to: 'V7', color: 'red' }, { from: 'bII7_V', to: 'V7', color: 'red' }, { from: 'VIIdim7_V', to: 'V7', color: 'orange' },
                 { from: 'IIm7_V', to: 'V7_V', type: 'dashed' }, { from: 'IIm7_V', to: 'bII7_V', type: 'dashed' },
-                // Al VI
                 { from: 'V7_VI', to: 'VIm7', color: 'red' }, { from: 'bII7_VI', to: 'VIm7', color: 'red' }, { from: 'VIIdim7_VI', to: 'VIm7', color: 'orange' },
                 { from: 'IIm7b5_VI', to: 'V7_VI', type: 'dashed' }, { from: 'IIm7b5_VI', to: 'bII7_VI', type: 'dashed' }
             ];
@@ -612,8 +570,10 @@
         async function toggleMasterAudio() {
             if (!isAudioInitialized) {
                 await Tone.start();
-                synth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.5 } }).toDestination();
-                synth.volume.value = -6; isAudioInitialized = true;
+                // CORRECCIÓN: Usar Tone.Limiter para evitar saturación de audio (Clipping)
+                const limiter = new Tone.Limiter(-2).toDestination();
+                synth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.5 } }).connect(limiter);
+                synth.volume.value = -2; isAudioInitialized = true;
                 document.getElementById('masterPlayIcon').className = 'fa-solid fa-volume-high'; document.getElementById('masterPlayText').textContent = 'Audio Activo';
                 document.getElementById('masterPlayBtn').classList.replace('bg-indigo-600', 'bg-emerald-500');
             } else {
@@ -696,23 +656,26 @@
         }
 
         function createHTMLNode(node, isRadial = false) {
-            // Inicializamos y guardamos el nodo en un mapa global para acceder a él al hacer clic
-            window.nodeDataMap = window.nodeDataMap || {};
+            // CORRECCIÓN CRÍTICA: Registrar el nodo para que pueda ser interactuado sin crashear.
             window.nodeDataMap[node.id] = node;
 
             const notesStr = JSON.stringify(node.notes).replace(/"/g, '&quot;');
             
-            if (isRadial) {
-                let borderClass = 'border-slate-300 dark:border-slate-600'; let textColor = 'text-slate-800 dark:text-white'; let pillBg = 'bg-slate-100 dark:bg-slate-800';
-                if(node.color==='red') { textColor='text-red-600 dark:text-red-400'; pillBg='bg-red-50 dark:bg-red-900/50'; borderClass='border-red-300 dark:border-red-500/30'; }
-                if(node.color==='blue') { textColor='text-blue-600 dark:text-blue-400'; pillBg='bg-blue-50 dark:bg-blue-900/50'; borderClass='border-blue-300 dark:border-blue-500/30'; }
-                if(node.color==='emerald') { textColor='text-emerald-600 dark:text-emerald-400'; pillBg='bg-emerald-50 dark:bg-emerald-900/50'; borderClass='border-emerald-300 dark:border-emerald-500/30'; }
-                if(node.color==='orange') { textColor='text-orange-600 dark:text-orange-400'; pillBg='bg-orange-50 dark:bg-orange-900/50'; borderClass='border-orange-300 dark:border-orange-500/30'; }
-                if(node.color==='purple') { textColor='text-purple-600 dark:text-purple-400'; pillBg='bg-purple-50 dark:bg-purple-900/50'; borderClass='border-purple-300 dark:border-purple-500/30'; }
-                if(node.color==='fuchsia') { textColor='text-fuchsia-600 dark:text-fuchsia-400'; pillBg='bg-fuchsia-50 dark:bg-fuchsia-900/50'; borderClass='border-fuchsia-300 dark:border-fuchsia-500/30'; }
-                if(node.color==='amber') { textColor='text-amber-600 dark:text-amber-400'; pillBg='bg-amber-50 dark:bg-amber-900/50'; borderClass='border-amber-300 dark:border-amber-500/30'; }
-                if(node.color==='teal') { textColor='text-teal-600 dark:text-teal-400'; pillBg='bg-teal-50 dark:bg-teal-900/50'; borderClass='border-teal-300 dark:border-teal-500/30'; }
+            // CORRECCIÓN: Optimización usando diccionarios en lugar de un bloque de `if` redundante.
+            const colorConfig = {
+                red: { text: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/50', border: 'border-red-300 dark:border-red-500/30' },
+                blue: { text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/50', border: 'border-blue-300 dark:border-blue-500/30' },
+                emerald: { text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/50', border: 'border-emerald-300 dark:border-emerald-500/30' },
+                orange: { text: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/50', border: 'border-orange-300 dark:border-orange-500/30' },
+                purple: { text: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/50', border: 'border-purple-300 dark:border-purple-500/30' },
+                fuchsia: { text: 'text-fuchsia-600 dark:text-fuchsia-400', bg: 'bg-fuchsia-50 dark:bg-fuchsia-900/50', border: 'border-fuchsia-300 dark:border-fuchsia-500/30' },
+                amber: { text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/50', border: 'border-amber-300 dark:border-amber-500/30' },
+                teal: { text: 'text-teal-600 dark:text-teal-400', bg: 'bg-teal-50 dark:bg-teal-900/50', border: 'border-teal-300 dark:border-teal-500/30' },
+                slate: { text: 'text-slate-800 dark:text-white', bg: 'bg-slate-100 dark:bg-slate-800', border: 'border-slate-300 dark:border-slate-600' }
+            };
 
+            if (isRadial) {
+                let { text: textColor, bg: pillBg, border: borderClass } = colorConfig[node.color] || colorConfig.slate;
                 let bgClass = node.format || 'node-prep';
 
                 return `
@@ -914,8 +877,7 @@
         window.addNodeToTimeline = function(nodeId, fallbackName, fallbackColor, fallbackNotesStr) {
             if(isDraggingNode) return; 
             
-            // Accedemos de manera segura al diccionario global
-            let node = (window.nodeDataMap && window.nodeDataMap[nodeId]) || { id: nodeId, name: fallbackName.replace(/maj7|m7|7|m7\(b5\)|dim7/,''), type: fallbackName.match(/maj7|m7\(b5\)|m7|7|dim7/)?.[0] || '', color: fallbackColor, notes: JSON.parse(fallbackNotesStr.replace(/&quot;/g, '"')) };
+            let node = window.nodeDataMap[nodeId] || { id: nodeId, name: fallbackName.replace(/maj7|m7|7|m7\(b5\)|dim7/,''), type: fallbackName.match(/maj7|m7\(b5\)|m7|7|dim7/)?.[0] || '', color: fallbackColor, notes: JSON.parse(fallbackNotesStr.replace(/&quot;/g, '"')) };
             if(!node) return;
 
             let pcs = node.notes.map(n => n.replace(/\d/g, ''));
@@ -923,7 +885,8 @@
             let insertionMode = document.getElementById('insertionModeSelect').value;
             
             if (insertionMode === 'interactive_vl' && currentProgression.length > 0) {
-                showInteractiveVLModal(node, pcs);
+                // LLAMADA CORREGIDA: Se despliega modal para elegir bajo manualmente.
+                window.showInteractiveVLModal(node, pcs);
                 return;
             } 
 
@@ -938,19 +901,16 @@
                 upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices, node.type);
                 
                 if (insertionMode === 'auto_vl') {
-                    // Generar inversión automática en el bajo (Voice Leading profundo)
                     let prevBass = prevChord.bassMidi;
                     let bestBassMidi = bassMidi;
                     let minLeap = Infinity;
                     let bestPcName = pcs[0];
                     
-                    // Buscar la nota más cercana al bajo anterior (rango amplio de 3 octavas)
                     pcs.forEach((pc, idx) => {
                         let pcIdx = getMidiIdx(pc);
                         for(let oct = 1; oct <= 3; oct++) {
                             let candMidi = pcIdx + oct * 12; // De C1 a B3
                             let leap = Math.abs(candMidi - prevBass);
-                            // En caso de empate, priorizamos la fundamental (idx === 0)
                             if (leap < minLeap || (leap === minLeap && idx === 0)) {
                                 minLeap = leap;
                                 bestBassMidi = candMidi;
@@ -960,12 +920,10 @@
                     });
                     
                     bassMidi = bestBassMidi;
-                    // Actualizar el cifrado solo si no cayó en la fundamental
                     if (bestPcName !== pcs[0]) slashName = slashName + '/' + bestPcName;
                 }
             }
 
-            // Unir bajo y voces superiores para reproducir el acorde real generado
             let allMidi = [bassMidi, ...upperMidiVoices];
             let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
 
@@ -975,11 +933,68 @@
             pushToProgression(node, bassMidi, upperMidiVoices, slashName);
         }
 
-        function updateTimelineUI() {
+        // FUNCIONES CORREGIDAS: Funciones faltantes añadidas para el Timeline interactivo.
+        window.showInteractiveVLModal = function(node, pcs) {
+            const modal = document.getElementById('interactiveVLModal');
+            document.getElementById('ivl_chord_name').textContent = node.name + (node.type || '');
+            const optionsContainer = document.getElementById('ivl_options');
+            optionsContainer.innerHTML = '';
+
+            pcs.forEach((pc, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'py-3 px-4 rounded-xl font-black border-2 transition-all text-slate-700 bg-slate-50 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-200 dark:hover:border-indigo-500';
+                btn.innerHTML = `${pc} <span class="text-xs font-normal opacity-70 block">${idx === 0 ? 'Fundamental' : 'Inversión'}</span>`;
+                btn.onclick = () => {
+                    window.closeInteractiveVLModal();
+                    let prevChord = currentProgression[currentProgression.length - 1];
+                    let upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices, node.type);
+                    
+                    let pcIdx = getMidiIdx(pc);
+                    let prevBass = prevChord.bassMidi;
+                    let bestBassMidi = pcIdx + 36;
+                    let minLeap = Infinity;
+                    
+                    for(let oct = 1; oct <= 3; oct++) {
+                        let candMidi = pcIdx + oct * 12;
+                        let leap = Math.abs(candMidi - prevBass);
+                        if (leap < minLeap) { minLeap = leap; bestBassMidi = candMidi; }
+                    }
+                    
+                    let slashName = node.name + (node.type || '') + (idx !== 0 ? '/' + pc : '');
+                    let allMidi = [bestBassMidi, ...upperMidiVoices];
+                    let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
+
+                    if (!synth) toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes); });
+                    else playChordDirect(playNotes);
+
+                    pushToProgression(node, bestBassMidi, upperMidiVoices, slashName);
+                };
+                optionsContainer.appendChild(btn);
+            });
+            modal.classList.remove('hidden');
+        };
+
+        window.closeInteractiveVLModal = function() {
+            document.getElementById('interactiveVLModal').classList.add('hidden');
+        };
+
+        window.clearProgression = function() {
+            currentProgression = [];
+            document.getElementById('timelineDropzone').innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`;
+            window.playbackTimeouts.forEach(id => clearTimeout(id));
+            window.playbackTimeouts = [];
+            if(synth) synth.releaseAll();
+            isPlayingProgression = false;
+            document.getElementById('playProgBtn').innerHTML = '<i class="fa-solid fa-play"></i> <span class="hidden sm:inline">Reproducir Enlazado</span>';
+            document.getElementById('playProgBtn').classList.replace('bg-emerald-600', 'bg-indigo-600');
+        };
+
+        window.removeFromProgression = function(index) {
+            currentProgression.splice(index, 1);
             const container = document.getElementById('timelineDropzone');
-            if (currentProgression.length === 0) { 
-                container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`; 
-                return; 
+            if (currentProgression.length === 0) {
+                container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`;
+                return;
             }
             container.innerHTML = '';
             currentProgression.forEach((chord, i) => {
@@ -992,60 +1007,26 @@
                     </div>
                 `;
             });
-            container.scrollLeft = container.scrollWidth;
-        }
+        };
 
         function pushToProgression(node, bassMidi, upperMidiVoices, slashName) {
-            currentProgression.push({ nodeId: node.id, name: slashName, color: node.color, bassMidi, upperMidiVoices, originalNotes: node.notes, originalDeg: node.deg });
-            updateTimelineUI();
-        }
-
-        window.clearProgression = function() {
-            currentProgression = [];
-            updateTimelineUI();
-        };
-
-        window.removeFromProgression = function(index) {
-            currentProgression.splice(index, 1);
-            updateTimelineUI();
-        };
-
-        window.showInteractiveVLModal = function(node, pcs) {
-            let prevChord = currentProgression[currentProgression.length - 1];
-            let upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices, node.type);
-            
-            document.getElementById('ivl_chord_name').textContent = node.name + (node.type || '');
-            let optionsHtml = '';
-            pcs.forEach((pc, idx) => {
-                let pcIdx = getMidiIdx(pc);
-                let bassMidi = pcIdx + 36;
-                let slashName = node.name + (node.type || '') + (idx > 0 ? '/' + pc : '');
-                optionsHtml += `<button onclick="selectInteractiveBass(${bassMidi}, '${slashName}', '${node.id}')" class="p-4 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition flex flex-col items-center justify-center">
-                    <div class="text-lg font-black text-slate-800 dark:text-slate-200">${slashName}</div>
-                    <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">Bajo en ${pc}</div>
-                </button>`;
+            currentProgression.push({ nodeId: node.id, name: slashName, color: node.color, bassMidi, upperMidiVoices, originalNotes: node.notes });
+            const container = document.getElementById('timelineDropzone');
+            if (currentProgression.length === 0) { container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`; return; }
+            container.innerHTML = '';
+            currentProgression.forEach((chord, i) => {
+                let degHtml = chord.originalDeg ? `<div class="mt-1 text-[8px] md:text-[9px] px-2 py-0.5 rounded-full bg-white/50 dark:bg-black/20 text-${chord.color}-800 dark:text-${chord.color}-200 text-center w-[90%] shadow-sm leading-tight break-words"><span class="font-black tracking-wider">${chord.originalDeg}</span></div>` : '';
+                container.innerHTML += `
+                    <div class="relative flex-shrink-0 px-6 py-2 h-auto min-h-[60px] lg:min-h-[75px] w-auto min-w-[90px] rounded-xl border-2 border-${chord.color}-400 bg-${chord.color}-50 dark:bg-${chord.color}-900/40 flex flex-col items-center justify-center shadow-sm" id="timeline-chord-${i}">
+                        <span class="text-sm lg:text-xl font-black tracking-tight text-${chord.color}-700 dark:text-${chord.color}-200">${chord.name}</span>
+                        ${degHtml}
+                        <button type="button" onclick="removeFromProgression(${i})" class="absolute -top-2 -right-2 bg-slate-800 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center shadow-md hover:bg-red-500 transition-colors z-50 cursor-pointer"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                `;
             });
-            document.getElementById('ivl_options').innerHTML = optionsHtml;
-            
-            window.tempIVLData = { node, upperMidiVoices };
-            document.getElementById('interactiveVLModal').classList.remove('hidden');
-        };
-
-        window.closeInteractiveVLModal = function() {
-            document.getElementById('interactiveVLModal').classList.add('hidden');
-        };
-
-        window.selectInteractiveBass = function(bassMidi, slashName, nodeId) {
-            let { node, upperMidiVoices } = window.tempIVLData;
-            let allMidi = [bassMidi, ...upperMidiVoices];
-            let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
-
-            if (!synth) toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes); });
-            else playChordDirect(playNotes);
-
-            pushToProgression(node, bassMidi, upperMidiVoices, slashName);
-            closeInteractiveVLModal();
-        };
+            // CORRECCIÓN: Scroll Suave para mejor UX al añadir notas.
+            container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+        }
 
         async function playTimelineProgression() {
             if (currentProgression.length === 0 || isPlayingProgression) return;
@@ -1055,8 +1036,11 @@
             document.getElementById('playProgBtn').classList.replace('bg-indigo-600', 'bg-emerald-600');
             const chordDuration = 1.5;
             
+            window.playbackTimeouts.forEach(id => clearTimeout(id));
+            window.playbackTimeouts = [];
+
             currentProgression.forEach((chord, index) => {
-                setTimeout(() => {
+                let id = setTimeout(() => {
                     const now = Tone.now(); synth.releaseAll();
                     let allMidi = [chord.bassMidi, ...chord.upperMidiVoices];
                     let allNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
@@ -1074,13 +1058,16 @@
                         if (mapNode) { mapNode.classList.add('node-playing'); setTimeout(() => mapNode.classList.remove('node-playing'), chordDuration * 1000 * 0.8); }
                     }
                 }, index * chordDuration * 1000);
+                window.playbackTimeouts.push(id);
             });
 
-            setTimeout(() => {
+            let finalId = setTimeout(() => {
                 isPlayingProgression = false;
+                window.playbackTimeouts = [];
                 document.getElementById('playProgBtn').innerHTML = '<i class="fa-solid fa-play"></i> <span class="hidden sm:inline">Reproducir Enlazado</span>';
                 document.getElementById('playProgBtn').classList.replace('bg-emerald-600', 'bg-indigo-600');
             }, currentProgression.length * chordDuration * 1000);
+            window.playbackTimeouts.push(finalId);
         }
 
         window.addEventListener('resize', () => { requestAnimationFrame(() => { drawLines(); }); });
