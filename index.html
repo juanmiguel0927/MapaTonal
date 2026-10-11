@@ -112,6 +112,9 @@
                 </div>
             </div>
             <div class="flex items-center gap-2 md:gap-3">
+                <button onclick="openHelpModal()" class="w-9 h-9 rounded-full flex items-center justify-center bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/50 dark:hover:bg-indigo-800 text-indigo-600 dark:text-indigo-400 transition shadow-inner">
+                    <i class="fa-solid fa-circle-question"></i>
+                </button>
                 <button onclick="toggleTheme()" class="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition shadow-inner">
                     <i id="themeIcon" class="fa-solid fa-moon"></i>
                 </button>
@@ -169,8 +172,8 @@
             <div class="mt-2 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
                 <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-hand-pointer mr-1"></i> Modo de Inserción</h3>
                 <select id="insertionModeSelect" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                    <option value="auto_vl">Enlazado Automático</option>
-                    <option value="interactive_vl" selected>Interactivo (Elegir Bajo)</option>
+                    <option value="auto_vl" selected>Enlazado Automático (Recomendado)</option>
+                    <option value="interactive_vl">Interactivo (Elegir Bajo)</option>
                     <option value="root">Saltos (Fundamentales)</option>
                 </select>
 
@@ -223,7 +226,6 @@
                 </div>
             </div>
 
-            <!-- MODIFICACIÓN: Línea de tiempo más alta para mostrar la ficha completa -->
             <div id="timelinePanel" class="flex-shrink-0 h-[150px] lg:h-[160px] bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-700 shadow-[0_-15px_40px_rgba(0,0,0,0.2)] z-50 p-2 lg:p-4 flex flex-col justify-center">
                 <div class="flex justify-between items-center mb-2 px-2">
                     <div class="flex items-center gap-2">
@@ -240,7 +242,7 @@
                     </div>
                 </div>
 
-                <!-- MODIFICACIÓN: Dropzone más alto (h-20 a h-28) -->
+                <!-- Dropzone más alto (h-20 a h-28) -->
                 <div id="timelineDropzone" class="flex items-center gap-3 overflow-x-auto custom-scrollbar h-[100px] lg:h-[110px] p-2 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-950/50">
                     <div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>
                 </div>
@@ -254,6 +256,33 @@
             <p class="text-xs lg:text-sm text-slate-500 dark:text-slate-400 text-center mb-6">Voces superiores conectadas automáticamente hacia <span id="ivl_chord_name" class="font-black text-indigo-600 dark:text-indigo-400"></span></p>
             <div id="ivl_options" class="grid grid-cols-2 gap-4 lg:gap-6"></div>
             <button onclick="closeInteractiveVLModal()" class="mt-6 lg:mt-8 w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl font-black text-slate-600 dark:text-slate-300 transition-colors">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] hidden flex justify-center items-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 p-6 lg:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl lg:text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3"><i class="fa-solid fa-circle-question text-indigo-500"></i> Guía de Uso Rápido</h2>
+                <button onclick="closeHelpModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-100 hover:text-red-600 transition"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="space-y-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                <p><strong><i class="fa-solid fa-music w-5"></i> Centro Tonal:</strong> Cambia la tonalidad maestra. Todas las funciones armónicas se recalcularán matemáticamente al instante.</p>
+                <p><strong><i class="fa-solid fa-layer-group w-5"></i> Familias Tonales:</strong> Alterna entre la vista global interactiva o las progresiones lineales y lógicas aisladas (Dominante, Subdominante, Tónica).</p>
+                <p><strong><i class="fa-solid fa-filter w-5"></i> Filtros Visuales:</strong> Limpia el mapa global ocultando satélites (como dominantes secundarios o acordes modales) para enfocar tu estudio.</p>
+                
+                <div class="p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800/50">
+                    <p class="font-bold text-indigo-800 dark:text-indigo-300 mb-2"><i class="fa-solid fa-hand-pointer w-5"></i> Modos de Inserción (Línea de Tiempo):</p>
+                    <ul class="list-disc pl-5 space-y-2 text-indigo-700/80 dark:text-indigo-300/80">
+                        <li><strong>Enlazado Automático:</strong> (Recomendado). Conecta la melodía usando notas comunes hacia abajo (Voice Leading). <em>Calcula automáticamente la inversión más suave para el bajo</em> y añade el sufijo (ej. G7/D) para saltar lo menos posible.</li>
+                        <li><strong>Interactivo:</strong> Te muestra un panel para que tú elijas manualmente la inversión del bajo cada vez que tocas un acorde.</li>
+                        <li><strong>Saltos:</strong> Ignora el enlace melódico. Todos los acordes saltan agresivamente a posición fundamental.</li>
+                    </ul>
+                </div>
+                
+                <p><strong><i class="fa-solid fa-mouse-pointer w-5"></i> Drag & Drop:</strong> Haz clic y arrastra cualquier acorde del mapa completo. El navegador recordará su posición, permitiéndote construir tu propia red mental a tu gusto.</p>
+                <p><strong><i class="fa-solid fa-play w-5"></i> Reproducción:</strong> Cambia el estilo (Bloque, Arpegio, Groove). Pulsa la barra espaciadora para reproducir o detener la línea de tiempo.</p>
+            </div>
+            <button onclick="closeHelpModal()" class="mt-8 w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black transition-colors shadow-md">¡Entendido, a crear música!</button>
         </div>
     </div>
 
@@ -667,6 +696,10 @@
         }
 
         function createHTMLNode(node, isRadial = false) {
+            // Inicializamos y guardamos el nodo en un mapa global para acceder a él al hacer clic
+            window.nodeDataMap = window.nodeDataMap || {};
+            window.nodeDataMap[node.id] = node;
+
             const notesStr = JSON.stringify(node.notes).replace(/"/g, '&quot;');
             
             if (isRadial) {
@@ -875,76 +908,79 @@
             }
         }
 
+        window.openHelpModal = function() { document.getElementById('helpModal').classList.remove('hidden'); }
+        window.closeHelpModal = function() { document.getElementById('helpModal').classList.add('hidden'); }
+
         window.addNodeToTimeline = function(nodeId, fallbackName, fallbackColor, fallbackNotesStr) {
             if(isDraggingNode) return; 
             
-            let node = null;
-            if (currentCategory === 'global') node = theoryData.global.variations[0].nodes[nodeId];
-            if (!node) node = { id: nodeId, name: fallbackName.replace(/maj7|m7|7|m7\(b5\)|dim7/,''), type: fallbackName.match(/maj7|m7\(b5\)|m7|7|dim7/)?.[0] || '', color: fallbackColor, notes: JSON.parse(fallbackNotesStr.replace(/&quot;/g, '"')) };
-
-            if (!synth) toggleMasterAudio().then(() => { if(synth) playChordDirect(node.notes); });
-            else playChordDirect(node.notes);
+            // Accedemos de manera segura al diccionario global
+            let node = (window.nodeDataMap && window.nodeDataMap[nodeId]) || { id: nodeId, name: fallbackName.replace(/maj7|m7|7|m7\(b5\)|dim7/,''), type: fallbackName.match(/maj7|m7\(b5\)|m7|7|dim7/)?.[0] || '', color: fallbackColor, notes: JSON.parse(fallbackNotesStr.replace(/&quot;/g, '"')) };
+            if(!node) return;
 
             let pcs = node.notes.map(n => n.replace(/\d/g, ''));
+            let rootIdx = getMidiIdx(pcs[0]);
             let insertionMode = document.getElementById('insertionModeSelect').value;
-
+            
             if (insertionMode === 'interactive_vl' && currentProgression.length > 0) {
                 showInteractiveVLModal(node, pcs);
+                return;
+            } 
+
+            let bassMidi = 36 + rootIdx; // Fundamental por defecto
+            let upperMidiVoices = [];
+            let slashName = node.name + (node.type || '');
+
+            if (currentProgression.length === 0 || insertionMode === 'root') {
+                upperMidiVoices = generateInitialVoicing(pcs, node.type);
             } else {
-                // MODIFICACIÓN: Forzar el bajo entre C2 y C3 (Midi 36 a 48)
-                let pcIdx = getMidiIdx(pcs[0]);
-                let bassMidi = 36 + pcIdx; // C2 a B2.
-                let upperMidiVoices = [];
-                if (currentProgression.length === 0 || insertionMode === 'root') {
-                    upperMidiVoices = generateInitialVoicing(pcs);
-                } else {
-                    let prevChord = currentProgression[currentProgression.length - 1];
-                    upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices);
+                let prevChord = currentProgression[currentProgression.length - 1];
+                upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices, node.type);
+                
+                if (insertionMode === 'auto_vl') {
+                    // Generar inversión automática en el bajo (Voice Leading profundo)
+                    let prevBass = prevChord.bassMidi;
+                    let bestBassMidi = bassMidi;
+                    let minLeap = Infinity;
+                    let bestPcName = pcs[0];
+                    
+                    // Buscar la nota más cercana al bajo anterior (rango amplio de 3 octavas)
+                    pcs.forEach((pc, idx) => {
+                        let pcIdx = getMidiIdx(pc);
+                        for(let oct = 1; oct <= 3; oct++) {
+                            let candMidi = pcIdx + oct * 12; // De C1 a B3
+                            let leap = Math.abs(candMidi - prevBass);
+                            // En caso de empate, priorizamos la fundamental (idx === 0)
+                            if (leap < minLeap || (leap === minLeap && idx === 0)) {
+                                minLeap = leap;
+                                bestBassMidi = candMidi;
+                                bestPcName = pc;
+                            }
+                        }
+                    });
+                    
+                    bassMidi = bestBassMidi;
+                    // Actualizar el cifrado solo si no cayó en la fundamental
+                    if (bestPcName !== pcs[0]) slashName = slashName + '/' + bestPcName;
                 }
-                pushToProgression(node, bassMidi, upperMidiVoices, node.name + (node.type || ''));
             }
+
+            // Unir bajo y voces superiores para reproducir el acorde real generado
+            let allMidi = [bassMidi, ...upperMidiVoices];
+            let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
+
+            if (!synth) toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes); });
+            else playChordDirect(playNotes);
+
+            pushToProgression(node, bassMidi, upperMidiVoices, slashName);
         }
 
-        function pushToProgression(node, bassMidi, upperMidiVoices, slashName) {
-            currentProgression.push({ nodeId: node.id, name: slashName, color: node.color, bassMidi, upperMidiVoices, originalNotes: node.notes, originalDeg: node.deg });
-            renderTimeline();
-        }
-
-        window.showInteractiveVLModal = function(node, pcs) {
-            document.getElementById('ivl_chord_name').textContent = node.name + (node.type || '');
-            const optionsContainer = document.getElementById('ivl_options');
-            optionsContainer.innerHTML = '';
-            
-            let upperMidiVoices = calculateLinkedVoicing(pcs, currentProgression[currentProgression.length - 1].upperMidiVoices);
-            let rootIdx = getMidiIdx(pcs[0]);
-            let intervals = chordIntervals[node.type] || [0, 4, 7];
-            
-            intervals.forEach((interval, idx) => {
-                // MODIFICACIÓN: Forzar el bajo seleccionado entre C2 y C3 (Midi 36 a 48)
-                let bassNoteMidi = 36 + ((rootIdx + interval) % 12);
-                let bassNoteName = chromaticScale[(rootIdx + interval) % 12];
-                let isRoot = idx === 0;
-                let slashName = isRoot ? node.name + (node.type || '') : `${node.name + (node.type || '')}/${bassNoteName}`;
-                let invName = isRoot ? 'Fundamental' : idx === 1 ? '1ra Inversión' : idx === 2 ? '2da Inversión' : '3ra Inversión';
-                
-                let btn = document.createElement('button');
-                btn.className = `flex flex-col items-center justify-center p-4 rounded-xl border-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-all`;
-                btn.innerHTML = `<span class="text-xl font-black text-slate-800 dark:text-white">${slashName}</span><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">${invName}</span>`;
-                
-                btn.onclick = () => { pushToProgression(node, bassNoteMidi, upperMidiVoices, slashName); closeInteractiveVLModal(); };
-                optionsContainer.appendChild(btn);
-            });
-            document.getElementById('interactiveVLModal').classList.remove('hidden');
-        }
-        
-        window.closeInteractiveVLModal = function() { document.getElementById('interactiveVLModal').classList.add('hidden'); }
-        window.removeFromProgression = function(index) { currentProgression.splice(index, 1); renderTimeline(); }
-        window.clearProgression = function() { currentProgression = []; renderTimeline(); }
-
-        // MODIFICACIÓN: Render de la línea de tiempo mostrando la ficha completa del acorde (deg incluido)
-        function renderTimeline() {
+        function updateTimelineUI() {
             const container = document.getElementById('timelineDropzone');
-            if (currentProgression.length === 0) { container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`; return; }
+            if (currentProgression.length === 0) { 
+                container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`; 
+                return; 
+            }
             container.innerHTML = '';
             currentProgression.forEach((chord, i) => {
                 let degHtml = chord.originalDeg ? `<div class="mt-1 text-[8px] md:text-[9px] px-2 py-0.5 rounded-full bg-white/50 dark:bg-black/20 text-${chord.color}-800 dark:text-${chord.color}-200 text-center w-[90%] shadow-sm leading-tight break-words"><span class="font-black tracking-wider">${chord.originalDeg}</span></div>` : '';
@@ -958,6 +994,58 @@
             });
             container.scrollLeft = container.scrollWidth;
         }
+
+        function pushToProgression(node, bassMidi, upperMidiVoices, slashName) {
+            currentProgression.push({ nodeId: node.id, name: slashName, color: node.color, bassMidi, upperMidiVoices, originalNotes: node.notes, originalDeg: node.deg });
+            updateTimelineUI();
+        }
+
+        window.clearProgression = function() {
+            currentProgression = [];
+            updateTimelineUI();
+        };
+
+        window.removeFromProgression = function(index) {
+            currentProgression.splice(index, 1);
+            updateTimelineUI();
+        };
+
+        window.showInteractiveVLModal = function(node, pcs) {
+            let prevChord = currentProgression[currentProgression.length - 1];
+            let upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices, node.type);
+            
+            document.getElementById('ivl_chord_name').textContent = node.name + (node.type || '');
+            let optionsHtml = '';
+            pcs.forEach((pc, idx) => {
+                let pcIdx = getMidiIdx(pc);
+                let bassMidi = pcIdx + 36;
+                let slashName = node.name + (node.type || '') + (idx > 0 ? '/' + pc : '');
+                optionsHtml += `<button onclick="selectInteractiveBass(${bassMidi}, '${slashName}', '${node.id}')" class="p-4 border-2 border-indigo-200 dark:border-indigo-800 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition flex flex-col items-center justify-center">
+                    <div class="text-lg font-black text-slate-800 dark:text-slate-200">${slashName}</div>
+                    <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">Bajo en ${pc}</div>
+                </button>`;
+            });
+            document.getElementById('ivl_options').innerHTML = optionsHtml;
+            
+            window.tempIVLData = { node, upperMidiVoices };
+            document.getElementById('interactiveVLModal').classList.remove('hidden');
+        };
+
+        window.closeInteractiveVLModal = function() {
+            document.getElementById('interactiveVLModal').classList.add('hidden');
+        };
+
+        window.selectInteractiveBass = function(bassMidi, slashName, nodeId) {
+            let { node, upperMidiVoices } = window.tempIVLData;
+            let allMidi = [bassMidi, ...upperMidiVoices];
+            let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
+
+            if (!synth) toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes); });
+            else playChordDirect(playNotes);
+
+            pushToProgression(node, bassMidi, upperMidiVoices, slashName);
+            closeInteractiveVLModal();
+        };
 
         async function playTimelineProgression() {
             if (currentProgression.length === 0 || isPlayingProgression) return;
