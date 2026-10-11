@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapa Tonal — Haz visible la música</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        emerald: { 50: '#ecfdf5', 100: '#d1fae5', 400: '#34d399', 700: '#047857', 900: '#064e3b' },
+                        red: { 50: '#fef2f2', 100: '#fee2e2', 400: '#f87171', 700: '#b91c1c', 900: '#7f1d1d' },
+                        blue: { 50: '#eff6ff', 100: '#dbeafe', 400: '#60a5fa', 700: '#1d4ed8', 900: '#1e3a8a' },
+                        orange: { 50: '#fff7ed', 100: '#ffedd5', 400: '#fb923c', 700: '#c2410c', 900: '#7c2d12' },
+                        purple: { 50: '#faf5ff', 100: '#f3e8ff', 400: '#c084fc', 700: '#7e22ce', 900: '#581c87' },
+                        fuchsia: { 50: '#fdf4ff', 100: '#fae8ff', 400: '#e879f9', 700: '#a21caf', 900: '#701a75' },
+                        amber: { 50: '#fffbeb', 100: '#fef3c7', 400: '#fbbf24', 700: '#b45309', 900: '#78350f' },
+                        teal: { 50: '#f0fdfa', 100: '#ccfbf1', 400: '#2dd4bf', 700: '#0f766e', 900: '#134e4a' },
+                        slate: { 50: '#f8fafc', 800: '#1e293b', 900: '#0f172a', 950: '#020617'}
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+        
+        /* Textos de Fondo (Marcas de Agua Absolutas Limpias y Pequeñas) */
+        .zone-text {
+            position: absolute;
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 0;
+            text-transform: uppercase;
+            font-size: clamp(2rem, 3.5vw, 4rem);
+            letter-spacing: 0.1em;
+        }
+        .light .zone-text { opacity: 0.15; text-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
+        .dark .zone-text { opacity: 0.10; text-shadow: 2px 2px 15px rgba(255,255,255,0.05); }
+
+        /* Nodos Circulares */
+        .node-circle { 
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease; 
+            cursor: grab; 
+            border-radius: 50%; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: absolute; transform: translate(-50%, -50%);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            background: #ffffff; border: 3px solid rgba(0,0,0,0.05);
+            z-index: 20;
+            user-select: none;
+        }
+        .node-circle:active { cursor: grabbing; }
+        .dark .node-circle { background: #111111; border-color: rgba(255,255,255,0.08); box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.5); }
+        
+        .node-tonic-core { width: 130px; height: 130px; border: 4px solid rgba(16, 185, 129, 0.5); box-shadow: 0 0 40px rgba(16, 185, 129, 0.3); z-index: 40; }
+        .node-main { width: 110px; height: 110px; z-index: 30; }
+        .node-prep { width: 85px; height: 85px; z-index: 20; }
+        
+        .dark .node-prep { background: #1a1a1a; }
+        .light .node-prep { background: #f8fafc; }
+
+        .node-circle:hover { 
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8); z-index: 60 !important; 
+            transform: translate(-50%, -50%) scale(1.1); border-color: rgba(99, 102, 241, 0.5);
+        }
+        
+        .node-playing {
+            box-shadow: 0 0 60px rgba(99, 102, 241, 0.9) !important; border-color: #6366f1 !important;
+            transform: translate(-50%, -50%) scale(1.15) !important; z-index: 70 !important;
+        }
+
+        /* Nodos Cuadrados (Pestañas Individuales) */
+        .node-card { position: relative; border-radius: 1.5rem; min-width: 150px; padding: 1.2rem; transition: all 0.25s ease; cursor: pointer; box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15); display: flex; flex-direction: column; justify-content: center; align-items: center;}
+        .dark .node-card { background: #111111; border: 2px solid rgba(255,255,255,0.1); }
+        .node-card:active { transform: scale(0.95) !important; }
+        .node-card:hover { box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.3); z-index: 50 !important; transform: scale(1.05); }
+
+        /* SVG Lines */
+        path.connection-line { transition: stroke 0.3s ease; }
+        @keyframes dash { to { stroke-dashoffset: -24; } }
+        .animated-line { stroke-dasharray: 8; animation: dash 1.5s linear infinite; }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 dark:bg-[#0a0f1a] dark:text-slate-100 h-screen w-full flex flex-col">
+
+    <header class="flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur z-50">
+        <div class="w-full mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2.5 rounded-lg shadow-md flex items-center justify-center">
+                    <i class="fa-solid fa-project-diagram text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg md:text-xl font-black bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-transparent leading-none">Mapa Tonal</h1>
+                    <p class="text-[9px] md:text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-0.5">Haz visible la música</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 md:gap-3">
+                <button onclick="toggleTheme()" class="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition shadow-inner">
+                    <i id="themeIcon" class="fa-solid fa-moon"></i>
+                </button>
+                <button id="masterPlayBtn" onclick="toggleMasterAudio()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-[11px] md:text-sm font-bold flex items-center gap-2 transition shadow-md">
+                    <i id="masterPlayIcon" class="fa-solid fa-volume-xmark"></i> <span id="masterPlayText" class="hidden sm:inline">Activar Audio</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow flex flex-col lg:flex-row w-full relative overflow-hidden">
+        
+        <aside class="flex-shrink-0 w-full lg:w-[300px] h-auto lg:h-full border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-4 flex flex-col gap-4 overflow-y-auto z-40 shadow-sm relative">
+            <div class="space-y-1.5">
+                <h3 class="text-[10px] lg:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-music"></i> Centro Tonal
+                </h3>
+                <select id="keySelect" onchange="updateTone()" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2 text-sm lg:text-base font-black text-indigo-700 dark:text-indigo-400 focus:outline-none transition cursor-pointer shadow-sm">
+                    <option value="C">C (Do Mayor)</option>
+                    <option value="Db">Db (Reb Mayor)</option>
+                    <option value="D">D (Re Mayor)</option>
+                    <option value="Eb">Eb (Mib Mayor)</option>
+                    <option value="E">E (Mi Mayor)</option>
+                    <option value="F">F (Fa Mayor)</option>
+                    <option value="Gb">Gb (Solb Mayor)</option>
+                    <option value="G">G (Sol Mayor)</option>
+                    <option value="Ab">Ab (Lab Mayor)</option>
+                    <option value="A">A (La Mayor)</option>
+                    <option value="Bb">Bb (Sib Mayor)</option>
+                    <option value="B">B (Si Mayor)</option>
+                </select>
+            </div>
+
+            <div class="space-y-2">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Familias Tonales</h3>
+                <div class="flex flex-col gap-1.5" id="familyButtons"></div>
+            </div>
+
+            <div class="space-y-2 flex-grow border-t border-slate-200 dark:border-slate-700 pt-3" id="variationContainer">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Análisis Estructural</h3>
+                <div id="variationList" class="flex flex-col gap-1.5"></div>
+            </div>
+            
+            <div id="filtersPanel" class="mt-2 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2"><i class="fa-solid fa-filter"></i> Filtros Visuales</h3>
+                <div class="flex flex-col gap-2 pl-1">
+                    <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer hover:text-indigo-500 transition"><input type="checkbox" id="f_diatonic" checked onchange="applyFilters()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"> Diatónicos (Núcleo)</label>
+                    <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer hover:text-indigo-500 transition"><input type="checkbox" id="f_prep" checked onchange="applyFilters()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"> Preparaciones (II, bVIm7)</label>
+                    <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer hover:text-indigo-500 transition"><input type="checkbox" id="f_dom" checked onchange="applyFilters()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"> Dominantes Secundarios</label>
+                    <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer hover:text-indigo-500 transition"><input type="checkbox" id="f_dim" checked onchange="applyFilters()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"> Disminuidos Sustitutos</label>
+                    <label class="flex items-center gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer hover:text-indigo-500 transition"><input type="checkbox" id="f_modal" checked onchange="applyFilters()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"> Subdominante Menor (Intercambio Modal)</label>
+                </div>
+            </div>
+
+            <div class="mt-2 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-hand-pointer mr-1"></i> Modo de Inserción</h3>
+                <select id="insertionModeSelect" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                    <option value="auto_vl">Enlazado Automático</option>
+                    <option value="interactive_vl" selected>Interactivo (Elegir Bajo)</option>
+                    <option value="root">Saltos (Fundamentales)</option>
+                </select>
+
+                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-3"><i class="fa-solid fa-sliders mr-1"></i> Reproducción</h3>
+                <select id="playbackStyleSelect" class="w-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-[11px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                    <option value="strum">Bloque (Piano)</option>
+                    <option value="arpeggio">Arpegio (Guitarra)</option>
+                    <option value="bass_chord">Bajo + Acorde (Groove)</option>
+                </select>
+            </div>
+        </aside>
+
+        <section class="flex-grow flex flex-col relative bg-slate-100 dark:bg-[#0a0f1a] overflow-hidden" id="mainSection">
+            
+            <div class="flex-shrink-0 p-3 lg:p-4 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md z-30 flex justify-between items-start h-[70px] shadow-sm">
+                <div>
+                    <span id="graphSubtitle" class="text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400"></span>
+                    <h2 id="graphTitle" class="text-base lg:text-lg font-black text-slate-800 dark:text-slate-100 mt-0.5 leading-tight"></h2>
+                </div>
+                <div id="functionBadge" class="px-2.5 py-1 rounded-full text-[9px] font-black border-2 uppercase tracking-widest hidden md:block shadow-sm"></div>
+            </div>
+
+            <div class="flex-grow relative overflow-auto custom-scrollbar w-full h-full" id="scrollArea">
+                <div id="zoomWrapper" class="relative pointer-events-auto origin-top-left w-full h-full min-w-[1400px] min-h-[900px]"> 
+                    
+                    <!-- FONDOS VECTORIALES LIMPIOS -->
+                    <div id="zoneBackgrounds" class="absolute inset-0 z-0 pointer-events-none hidden w-full h-full">
+                        <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" class="absolute inset-0">
+                            <!-- Tónica (Triángulo Central Abajo) -->
+                            <polygon points="0,100 50,60 100,100" fill="#3f6212" opacity="0.10"></polygon>
+                            <!-- Subdominante (Polígono Izquierdo) -->
+                            <polygon points="0,0 50,0 50,60 0,100" fill="#1e3a8a" opacity="0.06"></polygon>
+                            <!-- Dominante (Polígono Derecho) -->
+                            <polygon points="50,0 100,0 100,100 50,60" fill="#854d0e" opacity="0.08"></polygon>
+                            
+                            <!-- Líneas Divisorias -->
+                            <polyline points="50,0 50,60" stroke="rgba(255,255,255,0.15)" stroke-width="0.3" fill="none"></polyline>
+                            <polyline points="50,60 0,100" stroke="rgba(255,255,255,0.15)" stroke-width="0.3" fill="none"></polyline>
+                            <polyline points="50,60 100,100" stroke="rgba(255,255,255,0.15)" stroke-width="0.3" fill="none"></polyline>
+                        </svg>
+                        
+                        <!-- TEXTOS PUROS Y PEQUEÑOS EN ESQUINAS -->
+                        <div class="zone-text text-blue-900 dark:text-blue-500 text-left" style="top: 5%; left: 5%;">SUBDOMINANTE</div>
+                        <div class="zone-text text-amber-900 dark:text-amber-500 text-right" style="top: 5%; right: 5%;">DOMINANTE</div>
+                        <div class="zone-text text-emerald-900 dark:text-emerald-500 text-center" style="bottom: 5%; left: 50%; transform: translateX(-50%);">TÓNICA</div>
+                    </div>
+
+                    <svg id="svgLines" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+                    <div id="nodesContainer" class="absolute inset-0 w-full h-full z-10"></div>
+                </div>
+            </div>
+
+            <!-- MODIFICACIÓN: Línea de tiempo más alta para mostrar la ficha completa -->
+            <div id="timelinePanel" class="flex-shrink-0 h-[150px] lg:h-[160px] bg-white/95 dark:bg-slate-900/95 border-t border-slate-200 dark:border-slate-700 shadow-[0_-15px_40px_rgba(0,0,0,0.2)] z-50 p-2 lg:p-4 flex flex-col justify-center">
+                <div class="flex justify-between items-center mb-2 px-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-indigo-500 text-[10px] lg:text-sm"></i>
+                        <h3 class="text-[10px] lg:text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Línea de Tiempo (Voice Leading)</h3>
+                    </div>
+                    <div class="flex items-center gap-2 lg:gap-3">
+                        <button onclick="clearProgression()" class="px-3 py-1.5 lg:px-4 lg:py-2 text-[10px] lg:text-xs font-bold rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <i class="fa-solid fa-trash-can mr-1"></i> Limpiar
+                        </button>
+                        <button onclick="playTimelineProgression()" id="playProgBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 lg:px-6 lg:py-2.5 rounded-lg text-[10px] lg:text-xs font-black flex items-center gap-2 transition shadow-lg transform hover:scale-105 active:scale-95">
+                            <i class="fa-solid fa-play"></i> <span class="hidden sm:inline">Reproducir Enlazado</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MODIFICACIÓN: Dropzone más alto (h-20 a h-28) -->
+                <div id="timelineDropzone" class="flex items-center gap-3 overflow-x-auto custom-scrollbar h-[100px] lg:h-[110px] p-2 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-950/50">
+                    <div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="interactiveVLModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden flex justify-center items-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 p-6 lg:p-8">
+            <h2 class="text-xl lg:text-2xl font-black text-slate-800 dark:text-white mb-2 text-center">Elegir Inversión (Bajo)</h2>
+            <p class="text-xs lg:text-sm text-slate-500 dark:text-slate-400 text-center mb-6">Voces superiores conectadas automáticamente hacia <span id="ivl_chord_name" class="font-black text-indigo-600 dark:text-indigo-400"></span></p>
+            <div id="ivl_options" class="grid grid-cols-2 gap-4 lg:gap-6"></div>
+            <button onclick="closeInteractiveVLModal()" class="mt-6 lg:mt-8 w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl font-black text-slate-600 dark:text-slate-300 transition-colors">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+        let currentCategory = 'global';
+        let currentVariation = 'all';
+        let currentKey = 'C';
+        let isAudioInitialized = false;
+        let synth = null;
+        let theoryData = {};
+        let currentProgression = [];
+        let isPlayingProgression = false;
+        let isDraggingNode = false;
+        
+        let activeFilters = { diatonic: true, prep: true, dom: true, dim: true, modal: true };
+
+        const chromaticScale = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+        const normMap = {'C':0, 'C#':1, 'Db':1, 'D':2, 'D#':3, 'Eb':3, 'E':4, 'Fb':4, 'F':5, 'F#':6, 'Gb':6, 'G':7, 'G#':8, 'Ab':8, 'A':9, 'A#':10, 'Bb':10, 'B':11, 'Cb':11};
+
+        const rootsMap = {
+            'C':  { I:'C',  bII:'Db', II:'D',  bIII:'Eb', III:'E',  IV:'F',  bV:'Gb', V:'G',  bVI:'Ab', VI:'A',  bVII:'Bb', VII:'B' },
+            'G':  { I:'G',  bII:'Ab', II:'A',  bIII:'Bb', III:'B',  IV:'C',  bV:'Db', V:'D',  bVI:'Eb', VI:'E',  bVII:'F',  VII:'F#'},
+            'D':  { I:'D',  bII:'Eb', II:'E',  bIII:'F',  III:'F#', IV:'G',  bV:'Ab', V:'A',  bVI:'Bb', VI:'B',  bVII:'C',  VII:'C#'},
+            'A':  { I:'A',  bII:'Bb', II:'B',  bIII:'C',  III:'C#', IV:'D',  bV:'Eb', V:'E',  bVI:'F',  VI:'F#', bVII:'G',  VII:'G#'},
+            'E':  { I:'E',  bII:'F',  II:'F#', bIII:'G',  III:'G#', IV:'A',  bV:'Bb', V:'B',  bVI:'C',  VI:'C#', bVII:'D',  VII:'D#'},
+            'B':  { I:'B',  bII:'C',  II:'C#', bIII:'D',  III:'D#', IV:'E',  bV:'F',  V:'F#', bVI:'G',  VI:'G#', bVII:'A',  VII:'A#'},
+            'F':  { I:'F',  bII:'Gb', II:'G',  bIII:'Ab', III:'A',  IV:'Bb', bV:'Cb', V:'C',  bVI:'Db', VI:'D',  bVII:'Eb', VII:'E' },
+            'Bb': { I:'Bb', bII:'Cb', II:'C',  bIII:'Db', III:'D',  IV:'Eb', bV:'Fb', V:'F',  bVI:'Gb', VI:'G',  bVII:'Ab', VII:'A' },
+            'Eb': { I:'Eb', bII:'Fb', II:'F',  bIII:'Gb', III:'G',  IV:'Ab', bV:'Bbb',V:'Bb', bVI:'Cb', VI:'C',  bVII:'Db', VII:'D' },
+            'Ab': { I:'Ab', bII:'Bbb',II:'Bb', bIII:'Cb', III:'C',  IV:'Db', bV:'Ebb',V:'Eb', bVI:'Fb', VI:'F',  bVII:'Gb', VII:'G' },
+            'Db': { I:'Db', bII:'Ebb',II:'Eb', bIII:'Fb', III:'F',  IV:'Gb', bV:'Abb',V:'Ab', bVI:'Bbb',VI:'Bb', bVII:'Cb', VII:'C' },
+            'Gb': { I:'Gb', bII:'Abb',II:'Ab', bIII:'Bbb',III:'Bb', IV:'Cb', bV:'Dbb',V:'Db', bVI:'Ebb',VI:'Eb', bVII:'Fb', VII:'F' }
+        };
+
+        const chordIntervals = { 'maj7': [0,4,7,11], 'm7': [0,3,7,10], '7': [0,4,7,10], 'm7(b5)': [0,3,6,10], 'dim7': [0,3,6,9], 'maj': [0,4,7], 'm': [0,3,7] };
+
+        function getReadableRoots(key) { let r = { ...rootsMap[key] }; if(key === 'Db') { r.bII = 'D'; r.bVI = 'A'; r.bVII = 'B'; } if(key === 'Gb') { r.bII = 'G'; r.bVI = 'D'; r.bVII = 'E'; } if(key === 'Ab') { r.bII = 'A'; r.bVI = 'E'; } if(key === 'Eb') { r.bII = 'E'; r.bVI = 'B'; } return r; }
+        function getNotesForChord(rootStr, type, baseOctave = 3) { let rootIndex = normMap[rootStr] || 0; return chordIntervals[type].map(interval => { let absoluteSemi = rootIndex + interval; let oct = baseOctave + Math.floor(absoluteSemi / 12); return chromaticScale[absoluteSemi % 12] + oct; }); }
+        function getNoteStr(base, semi, forceFlat = false) { let i = (normMap[base] + semi + 12) % 12; const isFlatKey = ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb'].includes(currentKey); return (forceFlat || isFlatKey) ? ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'][i] : ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][i]; }
+        function getMidiIdx(pcStr) { let note = pcStr.replace(/\d/g, ''); let idx = chromaticScale.indexOf(note); if(idx === -1) { const enh = {'C#':'Db', 'D#':'Eb', 'F#':'Gb', 'G#':'Ab', 'A#':'Bb', 'Cb':'B', 'E#':'F', 'B#':'C'}; idx = chromaticScale.indexOf(enh[note]); } return idx !== -1 ? idx : 0; }
+        
+        function permute(arr) { if (arr.length === 0) return [[]]; let result = []; for (let i = 0; i < arr.length; i++) { let rest = permute(arr.slice(0, i).concat(arr.slice(i + 1))); for (let j = 0; j < rest.length; j++) result.push([arr[i]].concat(rest[j])); } return result; }
+        
+        // MODIFICACIÓN: Rango de voces superiores G4-F#5 (Midi 67 a 78) y Bajo C2-C3 (Midi 36 a 48)
+        function generateInitialVoicing(targetPCs) { 
+            let basePcs = targetPCs.map(getMidiIdx); 
+            let voicing = []; 
+            // Iniciar la búsqueda de la primera voz cerca de G4 (midi 67)
+            let currentMidi = 67; 
+            for(let i=0; i<basePcs.length; i++) { 
+                let pc = basePcs[i]; 
+                let oct = Math.floor(currentMidi / 12); 
+                let cand = pc + oct * 12; 
+                // Asegurarse de que la nota esté al menos en currentMidi
+                if(cand < currentMidi) cand += 12; 
+                voicing.push(cand); 
+                currentMidi = cand; 
+            } 
+            // Mantener dentro de G4 a F#5 (67 a 78)
+            let topNote = voicing[voicing.length-1]; 
+            if (topNote > 78) voicing = voicing.map(v => v - 12); 
+            return voicing.sort((a,b) => a-b); 
+        }
+        
+        function calculateLinkedVoicing(targetPCs, prevMidiVoices) { 
+            let basePcs = targetPCs.map(getMidiIdx); 
+            let bestDistance = Infinity; 
+            let bestVoicing = []; 
+            function getClosestMidi(pcBase, targetMidi) { 
+                let oct = Math.floor(targetMidi / 12); 
+                let cand1 = pcBase + oct * 12; 
+                let arr = [cand1, cand1 + 12, cand1 - 12]; 
+                arr.sort((a,b) => Math.abs(a - targetMidi) - Math.abs(b - targetMidi)); 
+                return arr[0]; 
+            } 
+            const perms = permute(basePcs); 
+            for(let p of perms) { 
+                let currentVoicing = []; 
+                let currentDist = 0; 
+                for(let i=0; i<prevMidiVoices.length; i++) { 
+                    let pc = p[i % p.length]; 
+                    let closest = getClosestMidi(pc, prevMidiVoices[i]); 
+                    currentVoicing.push(closest); 
+                    currentDist += Math.abs(closest - prevMidiVoices[i]); 
+                } 
+                let uniqueSize = new Set(currentVoicing).size; 
+                if (uniqueSize !== currentVoicing.length) currentDist += 1000; 
+                if(currentDist < bestDistance) { 
+                    bestDistance = currentDist; 
+                    bestVoicing = currentVoicing.slice(); 
+                } 
+            } 
+            // Clamp opcional para asegurar que no se salga mucho del rango deseado
+            if(bestVoicing[0] < 60) bestVoicing = bestVoicing.map(v => v + 12);
+            if(bestVoicing[bestVoicing.length-1] > 84) bestVoicing = bestVoicing.map(v => v - 12);
+            return bestVoicing.sort((a,b) => a-b); 
+        }
+
+        // Recuperar posición de LocalStorage
+        function getSavedPos(id, defaultX, defaultY) {
+            try {
+                let saved = JSON.parse(localStorage.getItem('mapaTonalPositions')) || {};
+                if (saved[id]) return saved[id];
+            } catch (e) {}
+            return { x: defaultX, y: defaultY };
+        }
+
+        window.applyFilters = function() {
+            activeFilters.diatonic = document.getElementById('f_diatonic').checked;
+            activeFilters.prep = document.getElementById('f_prep').checked;
+            activeFilters.dom = document.getElementById('f_dom').checked;
+            activeFilters.dim = document.getElementById('f_dim').checked;
+            activeFilters.modal = document.getElementById('f_modal').checked;
+            renderDiagram();
+        }
+
+        function buildTheoryData(key) {
+            const r = getReadableRoots(key);
+            
+            // Fila principal dominante sin /I
+            let principalDomRow = [
+                { id: `ii_I`, name: r.II, type: 'm7', notes: getNotesForChord(r.II, 'm7'), color: 'blue', deg: 'IIm7' },
+                { id: `v_I`, name: r.V, type: '7', notes: getNotesForChord(r.V, '7'), color: 'red', deg: 'V7' },
+                { id: `d_I`, name: r.I, type: 'maj7', notes: getNotesForChord(r.I, 'maj7'), color: 'emerald', deg: 'Imaj7' }
+            ];
+
+            let secDomRows = [principalDomRow]; 
+            let secSubRows = []; let secHybRows = []; let secFullSubRows = []; let secDimRows = [];
+
+            const secTargets = [
+                { deg: 'I', root: r.I, type: 'maj7', color: 'emerald' },
+                { deg: 'II', root: r.II, type: 'm7', color: 'blue' },
+                { deg: 'III', root: r.III, type: 'm7', color: 'emerald' },
+                { deg: 'IV', root: r.IV, type: 'maj7', color: 'blue' },
+                { deg: 'V', root: r.V, type: '7', color: 'red' },
+                { deg: 'VI', root: r.VI, type: 'm7', color: 'emerald' }
+            ];
+
+            // Generación algorítmica y Cifrado Weber
+            secTargets.forEach((t, idx) => {
+                let v7Root = getNoteStr(t.root, 7);
+                let subRoot = getNoteStr(t.root, 1, true); 
+                let iiRoot = getNoteStr(t.root, 2);
+                let subIIRoot = getNoteStr(subRoot, 7, true); 
+                let isDestMajor = (t.type === 'maj7' || t.type === '7');
+                
+                // Regla del destino: Si el destino es menor, su preparación (II y bVIm7) es m7(b5)
+                let iiType = isDestMajor ? 'm7' : 'm7(b5)';
+                let subIIType = isDestMajor ? 'm7' : 'm7(b5)';
+                let dimRoot = getNoteStr(t.root, 11);
+                let dimType = isDestMajor ? 'm7(b5)' : 'dim7';
+                
+                let nDest = { id: `d_${t.deg}`, name: t.root, type: t.type, notes: getNotesForChord(t.root, t.type), color: t.color, deg: `${t.deg}${t.type === 'maj7' ? 'maj7' : t.type}` };
+                let nV7 = { id: `v_${t.deg}`, name: v7Root, type: '7', notes: getNotesForChord(v7Root, '7'), color: 'red', deg: `V7/${t.deg}` };
+                let nSub = { id: `s_${t.deg}`, name: subRoot, type: '7', notes: getNotesForChord(subRoot, '7'), color: 'red', deg: `bII7/${t.deg}` };
+                let nII = { id: `ii_${t.deg}`, name: iiRoot, type: iiType, notes: getNotesForChord(iiRoot, iiType), color: 'purple', deg: `IIm7${!isDestMajor ? '(b5)' : ''}/${t.deg}` };
+                let nSubII = { id: `sii_${t.deg}`, name: subIIRoot, type: subIIType, notes: getNotesForChord(subIIRoot, subIIType), color: 'fuchsia', deg: `bVIm7${!isDestMajor ? '(b5)' : ''}/${t.deg}` };
+                let nDim = { id: `dim_${t.deg}`, name: dimRoot, type: dimType, notes: getNotesForChord(dimRoot, dimType), color: 'orange', deg: isDestMajor ? `VIIm7(b5)/${t.deg}` : `VIIº7/${t.deg}` };
+                
+                if(idx !== 0) secDomRows.push([nII, nV7, nDest]);
+                secSubRows.push([{...nII, id:`ii2_${t.deg}`}, nSub, {...nDest, id:`d2_${t.deg}`}]);
+                secHybRows.push([nSubII, {...nV7, id:`v2_${t.deg}`}, {...nDest, id:`d3_${t.deg}`}]);
+                secFullSubRows.push([{...nSubII, id:`sii2_${t.deg}`}, {...nSub, id:`s2_${t.deg}`}, {...nDest, id:`d4_${t.deg}`}]);
+                secDimRows.push([{...nII, id:`ii3_${t.deg}`}, nDim, {...nDest, id:`d5_${t.deg}`}]);
+            });
+
+            // Cifrado Weber Modal
+            const modalData = [
+                { id: 'IVm7', group: 'modal', name: r.IV, type: 'm7', color: 'purple', deg: 'IVm7', mode: 'Eólico' },
+                { id: 'bVImaj7', group: 'modal', name: r.bVI, type: 'maj7', color: 'purple', deg: 'bVImaj7', mode: 'Eólico' },
+                { id: 'bVII7', group: 'modal', name: r.bVII, type: '7', color: 'purple', deg: 'bVII7', mode: 'Eólico' },
+                { id: 'bIImaj7', group: 'modal', name: r.bII, type: 'maj7', color: 'fuchsia', deg: 'bIImaj7', mode: 'Frigio' },
+                { id: 'IIm7b5_modal', group: 'modal', name: r.II, type: 'm7(b5)', color: 'purple', deg: 'IIm7(b5)', mode: 'Eólico' },
+                { id: 'bVIIm7', group: 'modal', name: r.bVII, type: 'm7', color: 'fuchsia', deg: 'bVIIm7', mode: 'Frigio' },
+                { id: 'bVI7', group: 'modal', name: r.bVI, type: '7', color: 'teal', deg: 'bVI7', mode: 'Locrio' },
+                { id: 'bVIImaj7', group: 'modal', name: r.bVII, type: 'maj7', color: 'orange', deg: 'bVIImaj7', mode: 'Mixolidio' }
+            ];
+            modalData.forEach(m => m.notes = getNotesForChord(m.name, m.type));
+
+            // MODIFICACIÓN: Coordenadas XY fieles a la imagen (Racimos alrededor de su destino)
+            let globalNodes = {
+                // TÓNICA Y RELATIVOS (Abajo Centro)
+                'Imaj7': { id: 'Imaj7', group: 'diatonic', name: r.I, type: 'maj7', notes: getNotesForChord(r.I, 'maj7'), color: 'emerald', format: 'node-tonic-core', deg: 'Imaj7', ...getSavedPos('Imaj7', 50, 75) },
+                'Im7': { id: 'Im7', group: 'diatonic', name: r.I, type: 'm7', notes: getNotesForChord(r.I, 'm7'), color: 'teal', format: 'node-prep', deg: 'Im7', ...getSavedPos('Im7', 48, 85) },
+                'bIIImaj7': { id: 'bIIImaj7', group: 'diatonic', name: r.bIII, type: 'maj7', notes: getNotesForChord(r.bIII, 'maj7'), color: 'teal', format: 'node-prep', deg: 'bIIImaj7', ...getSavedPos('bIIImaj7', 40, 82) },
+
+                // CÍRCULO DIATÓNICO (Racimos de Tensión)
+                'IVmaj7': { id: 'IVmaj7', group: 'diatonic', name: r.IV, type: 'maj7', notes: getNotesForChord(r.IV, 'maj7'), color: 'blue', format: 'node-main', deg: 'IVmaj7', ...getSavedPos('IVmaj7', 35, 50) },
+                'IIm7': { id: 'IIm7', group: 'diatonic', name: r.II, type: 'm7', notes: getNotesForChord(r.II, 'm7'), color: 'blue', format: 'node-main', deg: 'IIm7', ...getSavedPos('IIm7', 48, 45) },
+                'V7': { id: 'V7', group: 'diatonic', name: r.V, type: '7', notes: getNotesForChord(r.V, '7'), color: 'red', format: 'node-main', deg: 'V7', ...getSavedPos('V7', 62, 50) },
+                'VIm7': { id: 'VIm7', group: 'diatonic', name: r.VI, type: 'm7', notes: getNotesForChord(r.VI, 'm7'), color: 'emerald', format: 'node-main', deg: 'VIm7', ...getSavedPos('VIm7', 68, 75) },
+                'IIIm7': { id: 'IIIm7', group: 'diatonic', name: r.III, type: 'm7', notes: getNotesForChord(r.III, 'm7'), color: 'emerald', format: 'node-main', deg: 'IIIm7', ...getSavedPos('IIIm7', 75, 88) },
+                
+                // SATÉLITES AL I (Alrededor de Imaj7)
+                'SubV7': { id: 'SubV7', group: 'dom', name: r.bII, type: '7', notes: getNotesForChord(r.bII, '7'), color: 'red', format: 'node-prep', deg: 'bII7', ...getSavedPos('SubV7', 56, 60) },
+                'VIIdim7': { id: 'VIIdim7', group: 'dim', name: r.VII, type: 'm7(b5)', notes: getNotesForChord(r.VII, 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)', ...getSavedPos('VIIdim7', 65, 62) },
+
+                // SATÉLITES AL II (Alrededor de IIm7)
+                'V7_II': { id: 'V7_II', group: 'dom', name: getNoteStr(r.II, 7), type: '7', notes: getNotesForChord(getNoteStr(r.II, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/II', ...getSavedPos('V7_II', 45, 30) },
+                'IIm7b5_II': { id: 'IIm7b5_II', group: 'prep', name: getNoteStr(r.II, 2), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.II, 2), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'IIm7(b5)/II', ...getSavedPos('IIm7b5_II', 55, 20) },
+                'bII7_II': { id: 'bII7_II', group: 'dom', name: getNoteStr(r.II, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.II, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/II', ...getSavedPos('bII7_II', 60, 26) },
+                'VIIdim7_II': { id: 'VIIdim7_II', group: 'dim', name: getNoteStr(r.II, 11), type: 'dim7', notes: getNotesForChord(getNoteStr(r.II, 11), 'dim7'), color: 'orange', format: 'node-prep', deg: 'VIIº7/II', ...getSavedPos('VIIdim7_II', 52, 35) },
+
+                // SATÉLITES AL III (Alrededor de IIIm7)
+                'V7_III': { id: 'V7_III', group: 'dom', name: getNoteStr(r.III, 7), type: '7', notes: getNotesForChord(getNoteStr(r.III, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/III', ...getSavedPos('V7_III', 85, 75) },
+                'IIm7b5_III': { id: 'IIm7b5_III', group: 'prep', name: getNoteStr(r.III, 2), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.III, 2), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'IIm7(b5)/III', ...getSavedPos('IIm7b5_III', 92, 65) },
+                'bII7_III': { id: 'bII7_III', group: 'dom', name: getNoteStr(r.III, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.III, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/III', ...getSavedPos('bII7_III', 95, 80) },
+                'VIIdim7_III': { id: 'VIIdim7_III', group: 'dim', name: getNoteStr(r.III, 11), type: 'dim7', notes: getNotesForChord(getNoteStr(r.III, 11), 'dim7'), color: 'orange', format: 'node-prep', deg: 'VIIº7/III', ...getSavedPos('VIIdim7_III', 82, 85) },
+
+                // SATÉLITES AL IV (Alrededor de IVmaj7)
+                'V7_IV': { id: 'V7_IV', group: 'dom', name: getNoteStr(r.IV, 7), type: '7', notes: getNotesForChord(getNoteStr(r.IV, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/IV', ...getSavedPos('V7_IV', 22, 42) },
+                'IIm7_IV': { id: 'IIm7_IV', group: 'prep', name: getNoteStr(r.IV, 2), type: 'm7', notes: getNotesForChord(getNoteStr(r.IV, 2), 'm7'), color: 'purple', format: 'node-prep', deg: 'IIm7/IV', ...getSavedPos('IIm7_IV', 28, 28) },
+                'bII7_IV': { id: 'bII7_IV', group: 'dom', name: getNoteStr(r.IV, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.IV, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/IV', ...getSavedPos('bII7_IV', 35, 32) },
+                'VIIdim7_IV': { id: 'VIIdim7_IV', group: 'dim', name: getNoteStr(r.IV, 11), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.IV, 11), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/IV', ...getSavedPos('VIIdim7_IV', 25, 55) },
+
+                // SATÉLITES AL V (Alrededor de V7)
+                'V7_V': { id: 'V7_V', group: 'dom', name: getNoteStr(r.V, 7), type: '7', notes: getNotesForChord(getNoteStr(r.V, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/V', ...getSavedPos('V7_V', 62, 35) },
+                'IIm7_V': { id: 'IIm7_V', group: 'prep', name: getNoteStr(r.V, 2), type: 'm7', notes: getNotesForChord(getNoteStr(r.V, 2), 'm7'), color: 'purple', format: 'node-prep', deg: 'IIm7/V', ...getSavedPos('IIm7_V', 68, 22) },
+                'bII7_V': { id: 'bII7_V', group: 'dom', name: getNoteStr(r.V, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.V, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/V', ...getSavedPos('bII7_V', 75, 35) },
+                'VIIdim7_V': { id: 'VIIdim7_V', group: 'dim', name: getNoteStr(r.V, 11), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.V, 11), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/V', ...getSavedPos('VIIdim7_V', 75, 48) },
+
+                // SATÉLITES AL VI (Alrededor de VIm7)
+                'V7_VI': { id: 'V7_VI', group: 'dom', name: getNoteStr(r.VI, 7), type: '7', notes: getNotesForChord(getNoteStr(r.VI, 7), '7'), color: 'red', format: 'node-prep', deg: 'V7/VI', ...getSavedPos('V7_VI', 75, 62) },
+                'IIm7b5_VI': { id: 'IIm7b5_VI', group: 'prep', name: getNoteStr(r.VI, 2), type: 'm7(b5)', notes: getNotesForChord(getNoteStr(r.VI, 2), 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'IIm7(b5)/VI', ...getSavedPos('IIm7b5_VI', 70, 50) },
+                'bII7_VI': { id: 'bII7_VI', group: 'dom', name: getNoteStr(r.VI, 1, true), type: '7', notes: getNotesForChord(getNoteStr(r.VI, 1, true), '7'), color: 'red', format: 'node-prep', deg: 'bII7/VI', ...getSavedPos('bII7_VI', 85, 60) },
+                'VIIdim7_VI': { id: 'VIIdim7_VI', group: 'dim', name: getNoteStr(r.VI, 11), type: 'dim7', notes: getNotesForChord(getNoteStr(r.VI, 11), 'dim7'), color: 'orange', format: 'node-prep', deg: 'VIIº7/VI', ...getSavedPos('VIIdim7_VI', 82, 52) },
+
+                // SUBDOMINANTES MENORES (Intercambio Modal - Franja Izquierda)
+                'IVm7': { ...modalData[0], format: 'node-prep', ...getSavedPos('IVm7', 28, 60) },
+                'bVImaj7': { ...modalData[1], format: 'node-prep', ...getSavedPos('bVImaj7', 22, 65) },
+                'bVII7': { ...modalData[2], format: 'node-prep', ...getSavedPos('bVII7', 15, 75) },
+                'bIImaj7': { ...modalData[3], format: 'node-prep', ...getSavedPos('bIImaj7', 10, 85) },
+                'IIm7b5_modal': { ...modalData[4], format: 'node-prep', ...getSavedPos('IIm7b5_modal', 38, 62) },
+                'bVIIm7': { ...modalData[5], format: 'node-prep', ...getSavedPos('bVIIm7', 28, 72) },
+                'bVI7': { ...modalData[6], format: 'node-prep', ...getSavedPos('bVI7', 22, 80) },
+                'bVIImaj7': { ...modalData[7], format: 'node-prep', ...getSavedPos('bVIImaj7', 15, 88) }
+            };
+
+            let globalLinks = [
+                // Funciones diatónicas a tónica
+                { from: 'IVmaj7', to: 'Imaj7', color: 'blue' }, 
+                { from: 'V7', to: 'Imaj7', color: 'red' }, 
+                { from: 'SubV7', to: 'Imaj7', color: 'red' },
+                { from: 'VIIdim7', to: 'Imaj7', color: 'orange' },
+                
+                // Relativos menores
+                { from: 'Im7', to: 'bIIImaj7', type: 'dashed' }, 
+                { from: 'bIIImaj7', to: 'Imaj7', type: 'dashed' },
+                
+                // Círculo diatónico
+                { from: 'IIIm7', to: 'VIm7', type: 'dashed' }, 
+                { from: 'VIm7', to: 'IIm7', type: 'dashed' }, 
+                { from: 'IIm7', to: 'V7', type: 'dashed' },
+                
+                // Modales a tónica
+                { from: 'IVm7', to: 'Imaj7', color: 'purple' }, { from: 'bVImaj7', to: 'Imaj7', color: 'purple' }, { from: 'bVII7', to: 'Imaj7', color: 'purple' },
+                { from: 'bIImaj7', to: 'Imaj7', color: 'fuchsia' }, { from: 'IIm7b5_modal', to: 'Imaj7', color: 'purple' }, { from: 'bVIIm7', to: 'Imaj7', color: 'fuchsia' },
+                { from: 'bVI7', to: 'Imaj7', color: 'amber' }, { from: 'bVIImaj7', to: 'Imaj7', color: 'orange' }, 
+
+                // Conexiones de satélites II y bVIm7 hacia V7 secundarios y luego a objetivo
+                // Al II
+                { from: 'V7_II', to: 'IIm7', color: 'red' }, { from: 'bII7_II', to: 'IIm7', color: 'red' }, { from: 'VIIdim7_II', to: 'IIm7', color: 'orange' },
+                { from: 'IIm7b5_II', to: 'V7_II', type: 'dashed' }, { from: 'IIm7b5_II', to: 'bII7_II', type: 'dashed' },
+                // Al III
+                { from: 'V7_III', to: 'IIIm7', color: 'red' }, { from: 'bII7_III', to: 'IIIm7', color: 'red' }, { from: 'VIIdim7_III', to: 'IIIm7', color: 'orange' },
+                { from: 'IIm7b5_III', to: 'V7_III', type: 'dashed' }, { from: 'IIm7b5_III', to: 'bII7_III', type: 'dashed' },
+                // Al IV
+                { from: 'V7_IV', to: 'IVmaj7', color: 'red' }, { from: 'bII7_IV', to: 'IVmaj7', color: 'red' }, { from: 'VIIdim7_IV', to: 'IVmaj7', color: 'orange' },
+                { from: 'IIm7_IV', to: 'V7_IV', type: 'dashed' }, { from: 'IIm7_IV', to: 'bII7_IV', type: 'dashed' },
+                // Al V
+                { from: 'V7_V', to: 'V7', color: 'red' }, { from: 'bII7_V', to: 'V7', color: 'red' }, { from: 'VIIdim7_V', to: 'V7', color: 'orange' },
+                { from: 'IIm7_V', to: 'V7_V', type: 'dashed' }, { from: 'IIm7_V', to: 'bII7_V', type: 'dashed' },
+                // Al VI
+                { from: 'V7_VI', to: 'VIm7', color: 'red' }, { from: 'bII7_VI', to: 'VIm7', color: 'red' }, { from: 'VIIdim7_VI', to: 'VIm7', color: 'orange' },
+                { from: 'IIm7b5_VI', to: 'V7_VI', type: 'dashed' }, { from: 'IIm7b5_VI', to: 'bII7_VI', type: 'dashed' }
+            ];
+
+            return {
+                'global': {
+                    title: 'Mapa Tonal Completo', color: 'slate', icon: 'fa-globe',
+                    variations: [ { id: 'all', title: 'Matriz Radial (Orbital)', label: 'Ecosistema Completo de Tensión y Reposo', type: 'global_map', nodes: globalNodes, links: globalLinks } ]
+                },
+                'dominant': {
+                    title: 'Familia Dominante', color: 'red', icon: 'fa-bolt',
+                    variations: [
+                        { id: 'sec_doms', title: 'Principales (V7)', label: 'Ruta 1: IIm7 ➔ V7 ➔ Destino', type: 'progression_rows', divided: true, rows: secDomRows },
+                        { id: 'sec_subs', title: 'Tritonales (bII7)', label: 'Ruta 2: Preparación ➔ bII7 ➔ Destino', type: 'progression_rows', divided: true, rows: secSubRows },
+                        { id: 'sec_hyb', title: 'Híbridos (bVIm7 ➔ V7)', label: 'Ruta 3: bVIm7 ➔ V7 ➔ Destino', type: 'progression_rows', divided: true, rows: secHybRows },
+                        { id: 'sec_full_subs', title: 'Sustitutos (bVIm7 ➔ bII7)', label: 'Ruta 4: bVIm7 ➔ bII7 ➔ Destino', type: 'progression_rows', divided: true, rows: secFullSubRows },
+                        { id: 'sec_dims', title: 'Disminuidos', label: 'Ruta 5: Sustitutos Disminuidos Sensibles', type: 'progression_rows', divided: true, rows: secDimRows }
+                    ]
+                },
+                'subdominant': {
+                    title: 'Familia Subdominante', color: 'blue', icon: 'fa-road',
+                    variations: [
+                        { id: 'sub_maj', title: 'Preparación Mayor', label: 'Progresión Diatónica', type: 'progression_rows', rows: [
+                            [{ id: 'IVmaj7', name: r.IV, type: 'maj7', notes: getNotesForChord(r.IV, 'maj7'), color: 'blue', deg:'IVmaj7' }, 
+                             { id: 'IIm7', name: r.II, type: 'm7', notes: getNotesForChord(r.II, 'm7'), color: 'blue', deg:'IIm7' }, 
+                             { id: 'V7', name: r.V, type: '7', notes: getNotesForChord(r.V, '7'), color: 'red', deg:'V7' }]
+                        ]},
+                        { id: 'sub_modal', title: 'Subdominante Menor', label: 'Catálogo Completo Subdominante Menor (Intercambio Modal)', type: 'grid', divided: true, dividerText: 'Intercambio Modal (Origen)', rows: [ 
+                            [ { id: 'IVmaj7_orig', name: r.IV, type: 'maj7', notes: getNotesForChord(r.IV, 'maj7'), color: 'blue', deg:'IVmaj7 (Jónico)' }, { id: 'IIm7_orig', name: r.II, type: 'm7', notes: getNotesForChord(r.II, 'm7'), color: 'blue', deg:'IIm7 (Dórico)' } ],
+                            modalData.filter(m => m.mode === 'Eólico').map(m => ({...m, deg: `${m.deg} (Eólico)`})),
+                            modalData.filter(m => m.mode === 'Frigio').map(m => ({...m, deg: `${m.deg} (Frigio)`})),
+                            modalData.filter(m => m.mode === 'Mixolidio').map(m => ({...m, deg: `${m.deg} (Mixolidio)`})),
+                            modalData.filter(m => m.mode === 'Locrio').map(m => ({...m, deg: `${m.deg} (Locrio)`}))
+                        ] }
+                    ]
+                },
+                'tonic': {
+                    title: 'Familia Tónica', color: 'emerald', icon: 'fa-home',
+                    variations: [
+                        { id: 'tonic_maj', title: 'Centro Mayor', label: 'Tónica y Acordes Relativos', type: 'progression_rows', rows: [
+                            [{ id: 'Imaj7', name: r.I, type: 'maj7', notes: getNotesForChord(r.I, 'maj7'), color: 'emerald', deg:'Imaj7' }, 
+                             { id: 'IIIm7', name: r.III, type: 'm7', notes: getNotesForChord(r.III, 'm7'), color: 'emerald', deg:'IIIm7' }, 
+                             { id: 'VIm7', name: r.VI, type: 'm7', notes: getNotesForChord(r.VI, 'm7'), color: 'emerald', deg:'VIm7' }]
+                        ]},
+                        { id: 'tonic_min', title: 'Centro Menor', label: 'Tónica Menor y su Relativo', type: 'progression_rows', rows: [
+                            [{ id: 'Im7', name: r.I, type: 'm7', notes: getNotesForChord(r.I, 'm7'), color: 'teal', deg:'Im7' }, 
+                             { id: 'bIIImaj7', name: r.bIII, type: 'maj7', notes: getNotesForChord(r.bIII, 'maj7'), color: 'teal', deg:'bIIImaj7' }]
+                        ]}
+                    ]
+                }
+            };
+        }
+
+        async function toggleMasterAudio() {
+            if (!isAudioInitialized) {
+                await Tone.start();
+                synth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 1.5 } }).toDestination();
+                synth.volume.value = -6; isAudioInitialized = true;
+                document.getElementById('masterPlayIcon').className = 'fa-solid fa-volume-high'; document.getElementById('masterPlayText').textContent = 'Audio Activo';
+                document.getElementById('masterPlayBtn').classList.replace('bg-indigo-600', 'bg-emerald-500');
+            } else {
+                synth.releaseAll(); isAudioInitialized = false;
+                document.getElementById('masterPlayIcon').className = 'fa-solid fa-volume-xmark'; document.getElementById('masterPlayText').textContent = 'Activar Audio';
+                document.getElementById('masterPlayBtn').classList.replace('bg-emerald-500', 'bg-indigo-600');
+            }
+        }
+
+        function playChordDirect(notes) {
+            if(!isAudioInitialized || !synth) return;
+            let style = document.getElementById('playbackStyleSelect').value;
+            const now = Tone.now(); synth.releaseAll();
+            if (style === 'strum') { notes.forEach((note, i) => synth.triggerAttackRelease(note, '2n', now + (i * 0.03))); } 
+            else if (style === 'arpeggio') { notes.forEach((note, i) => synth.triggerAttackRelease(note, '4n', now + (i * 0.25))); } 
+            else if (style === 'bass_chord') {
+                synth.triggerAttackRelease(notes[0], '2n', now); 
+                const upper = notes.slice(1);
+                upper.forEach((n, i) => synth.triggerAttackRelease(n, '8n', now + 0.35 + (i * 0.02)));
+                upper.forEach((n, i) => synth.triggerAttackRelease(n, '8n', now + 0.75 + (i * 0.02)));
+            }
+        }
+
+        function toggleTheme() { document.documentElement.classList.toggle('dark'); document.getElementById('themeIcon').className = document.documentElement.classList.contains('dark') ? 'fa-solid fa-sun' : 'fa-solid fa-moon'; setTimeout(drawLines, 50); }
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            switch(e.code) {
+                case 'Space': e.preventDefault(); playTimelineProgression(); break;
+                case 'KeyC': clearProgression(); break;
+                case 'KeyM': toggleMasterAudio(); break;
+                case 'KeyT': toggleTheme(); break;
+            }
+        });
+
+        function updateTone() {
+            currentKey = document.getElementById('keySelect').value;
+            theoryData = buildTheoryData(currentKey);
+            renderSidebar(); renderDiagram();
+        }
+
+        function renderSidebar() {
+            const famContainer = document.getElementById('familyButtons'); famContainer.innerHTML = '';
+            const cats = ['global', 'dominant', 'subdominant', 'tonic'];
+
+            cats.forEach(c => {
+                const famData = theoryData[c];
+                const isActive = currentCategory === c;
+                if (isActive && !famData.variations.find(v => v.id === currentVariation)) currentVariation = famData.variations[0].id;
+
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-4 py-3 rounded-xl text-[11px] font-black transition-all flex items-center gap-3 border-2 ${
+                    isActive ? `bg-${famData.color}-100 dark:bg-${famData.color}-900/40 text-${famData.color}-800 dark:text-${famData.color}-300 border-${famData.color}-400 shadow-md`
+                             : `bg-transparent border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50`
+                }`;
+                btn.innerHTML = `<i class="fa-solid ${famData.icon} w-5 text-center"></i> <span>${famData.title}</span>`;
+                btn.onclick = () => { currentCategory = c; currentVariation = theoryData[c].variations[0].id; renderSidebar(); renderDiagram(); };
+                famContainer.appendChild(btn);
+            });
+
+            const varContainer = document.getElementById('variationList'); varContainer.innerHTML = '';
+            const currentFamData = theoryData[currentCategory];
+            
+            if (currentFamData.variations.length > 1) {
+                document.getElementById('variationContainer').style.display = 'block';
+                currentFamData.variations.forEach(v => {
+                    const btn = document.createElement('button');
+                    const isActive = currentVariation === v.id;
+                    btn.className = `w-full text-left px-3 py-2.5 rounded-lg text-[10px] font-bold transition-all border-2 ${
+                        isActive ? `bg-slate-800 text-white border-slate-800 dark:bg-slate-200 dark:text-slate-900`
+                                 : `bg-white dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700`
+                    }`;
+                    btn.textContent = v.title;
+                    btn.onclick = () => { currentVariation = v.id; renderSidebar(); renderDiagram(); };
+                    varContainer.appendChild(btn);
+                });
+            } else { document.getElementById('variationContainer').style.display = 'none'; }
+
+            document.getElementById('filtersPanel').style.display = currentCategory === 'global' ? 'block' : 'none';
+        }
+
+        function createHTMLNode(node, isRadial = false) {
+            const notesStr = JSON.stringify(node.notes).replace(/"/g, '&quot;');
+            
+            if (isRadial) {
+                let borderClass = 'border-slate-300 dark:border-slate-600'; let textColor = 'text-slate-800 dark:text-white'; let pillBg = 'bg-slate-100 dark:bg-slate-800';
+                if(node.color==='red') { textColor='text-red-600 dark:text-red-400'; pillBg='bg-red-50 dark:bg-red-900/50'; borderClass='border-red-300 dark:border-red-500/30'; }
+                if(node.color==='blue') { textColor='text-blue-600 dark:text-blue-400'; pillBg='bg-blue-50 dark:bg-blue-900/50'; borderClass='border-blue-300 dark:border-blue-500/30'; }
+                if(node.color==='emerald') { textColor='text-emerald-600 dark:text-emerald-400'; pillBg='bg-emerald-50 dark:bg-emerald-900/50'; borderClass='border-emerald-300 dark:border-emerald-500/30'; }
+                if(node.color==='orange') { textColor='text-orange-600 dark:text-orange-400'; pillBg='bg-orange-50 dark:bg-orange-900/50'; borderClass='border-orange-300 dark:border-orange-500/30'; }
+                if(node.color==='purple') { textColor='text-purple-600 dark:text-purple-400'; pillBg='bg-purple-50 dark:bg-purple-900/50'; borderClass='border-purple-300 dark:border-purple-500/30'; }
+                if(node.color==='fuchsia') { textColor='text-fuchsia-600 dark:text-fuchsia-400'; pillBg='bg-fuchsia-50 dark:bg-fuchsia-900/50'; borderClass='border-fuchsia-300 dark:border-fuchsia-500/30'; }
+                if(node.color==='amber') { textColor='text-amber-600 dark:text-amber-400'; pillBg='bg-amber-50 dark:bg-amber-900/50'; borderClass='border-amber-300 dark:border-amber-500/30'; }
+                if(node.color==='teal') { textColor='text-teal-600 dark:text-teal-400'; pillBg='bg-teal-50 dark:bg-teal-900/50'; borderClass='border-teal-300 dark:border-teal-500/30'; }
+
+                let bgClass = node.format || 'node-prep';
+
+                return `
+                    <div id="node-${node.id}" onclick="window.addNodeToTimeline('${node.id}', '${node.name+node.type}', '${node.color}', '${notesStr}')"
+                         class="node-circle ${bgClass} ${borderClass}" style="left: ${node.x}%; top: ${node.y}%;">
+                        <div class="flex items-baseline gap-0.5 justify-center ${textColor}">
+                            <span class="text-2xl md:text-3xl font-black tracking-tight">${node.name}</span>
+                            <span class="text-[10px] md:text-xs font-bold opacity-90">${node.type}</span>
+                        </div>
+                        <div class="mt-1 text-[8px] md:text-[9px] px-2 py-0.5 rounded-full ${pillBg} ${textColor} text-center w-[90%] shadow-sm leading-tight break-words max-h-[30px] overflow-hidden">
+                            <span class="font-black tracking-wider">${node.deg}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const bgLight = node.highlight ? `bg-${node.color}-50` : 'bg-white';
+                const bgDark = node.highlight ? `dark:bg-${node.color}-900/40` : 'dark:bg-slate-800';
+                const border = node.highlight ? `border-${node.color}-400 ring-4 ring-${node.color}-500/20` : 'border-slate-300 dark:border-slate-600';
+                const textColor = node.highlight ? `text-${node.color}-700 dark:text-${node.color}-200` : 'text-slate-700 dark:text-slate-100';
+                
+                return `
+                    <div id="node-${node.id}" onclick="window.addNodeToTimeline('${node.id}', '${node.name+node.type}', '${node.color}', '${notesStr}')"
+                         class="node-card relative flex flex-col justify-center items-center p-5 rounded-2xl border-2 ${border} ${bgLight} ${bgDark} shadow-xl min-w-[150px] z-10">
+                        <div class="flex items-baseline gap-0.5 justify-center ${textColor}">
+                            <span class="text-3xl font-black tracking-tight">${node.name}</span>
+                            <span class="text-xs font-bold opacity-90">${node.type}</span>
+                        </div>
+                        <span class="mt-3 text-[10px] font-bold px-3 py-1 rounded-full bg-${node.color}-100 dark:bg-${node.color}-900/50 text-${node.color}-800 dark:text-${node.color}-300 tracking-wide text-center">${node.deg}</span>
+                    </div>
+                `;
+            }
+        }
+
+        function renderDiagram() {
+            const famData = theoryData[currentCategory];
+            const varData = famData.variations.find(v => v.id === currentVariation);
+            
+            const titleEl = document.getElementById('graphTitle');
+            if(titleEl) titleEl.textContent = varData.title;
+            const subtitleEl = document.getElementById('graphSubtitle');
+            if(subtitleEl) subtitleEl.textContent = varData.label;
+            
+            const badgeEl = document.getElementById('functionBadge');
+            if(badgeEl) {
+                badgeEl.textContent = famData.title;
+                badgeEl.className = `px-3 py-1.5 rounded-full text-[10px] font-black border-2 uppercase tracking-widest text-${famData.color}-700 bg-${famData.color}-100 border-${famData.color}-300 dark:bg-${famData.color}-900/30 dark:text-${famData.color}-300 dark:border-${famData.color}-700 block`;
+            }
+
+            const container = document.getElementById('nodesContainer'); 
+            if(container) container.innerHTML = '';
+            
+            const svgLinesEl = document.getElementById('svgLines');
+            if(svgLinesEl) svgLinesEl.style.display = 'block';
+            
+            const backgroundsEl = document.getElementById('zoneBackgrounds');
+            if(backgroundsEl) backgroundsEl.style.display = currentCategory === 'global' ? 'block' : 'none';
+
+            if (varData.type === 'global_map') {
+                Object.values(varData.nodes).forEach(n => {
+                    if (!activeFilters[n.group]) return; 
+                    if(container) container.insertAdjacentHTML('beforeend', createHTMLNode(n, true));
+                });
+                initDraggable();
+            } else if (varData.type === 'progression_rows') {
+                varData.rows.forEach((rowNodes, idx) => {
+                    if (varData.divided && idx === 1) {
+                        const divider = document.createElement('div');
+                        divider.className = 'w-full flex items-center gap-4 my-8 px-10';
+                        divider.innerHTML = '<div class="flex-grow border-t-2 border-dashed border-slate-300 dark:border-slate-700"></div><span class="text-[10px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4 py-1 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-full">Dominantes Secundarias</span><div class="flex-grow border-t-2 border-dashed border-slate-300 dark:border-slate-700"></div>';
+                        if(container) container.appendChild(divider);
+                    }
+
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'flex flex-wrap justify-center items-center gap-6 md:gap-10 w-full mt-10';
+                    rowNodes.forEach((n, i) => {
+                        rowDiv.insertAdjacentHTML('beforeend', createHTMLNode(n, false));
+                        if(i < rowNodes.length - 1) rowDiv.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-arrow-right text-slate-300 dark:text-slate-600 text-2xl md:text-3xl px-1"></i>`);
+                    });
+                    if(container) container.appendChild(rowDiv);
+                });
+            } else if (varData.type === 'grid') {
+                varData.rows.forEach((rowNodes, idx) => {
+                    if (varData.divided && idx === 1) {
+                        const divider = document.createElement('div');
+                        divider.className = 'w-full flex items-center gap-4 my-8 px-10';
+                        divider.innerHTML = `<div class="flex-grow border-t-2 border-dashed border-slate-300 dark:border-slate-700"></div><span class="text-[10px] md:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4 py-1 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-full">${varData.dividerText}</span><div class="flex-grow border-t-2 border-dashed border-slate-300 dark:border-slate-700"></div>`;
+                        if(container) container.appendChild(divider);
+                    }
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'flex flex-wrap justify-center items-center gap-6 md:gap-10 w-full mt-10';
+                    rowNodes.forEach(n => rowDiv.insertAdjacentHTML('beforeend', createHTMLNode(n, false)));
+                    if(container) container.appendChild(rowDiv);
+                });
+            }
+
+            requestAnimationFrame(() => { setTimeout(drawLines, 50); });
+        }
+
+        function initDraggable() {
+            const nodes = document.querySelectorAll('.node-circle');
+            nodes.forEach(node => {
+                const handleStart = (e) => {
+                    if(e.type === 'mousedown' && e.button !== 0) return;
+                    isDraggingNode = false;
+                    let startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+                    let startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+                    let origLeft = parseFloat(node.style.left);
+                    let origTop = parseFloat(node.style.top);
+                    let container = document.getElementById('zoomWrapper');
+                    let rect = container.getBoundingClientRect();
+
+                    const handleMove = (ev) => {
+                        let currentX = ev.type === 'touchmove' ? ev.touches[0].clientX : ev.clientX;
+                        let currentY = ev.type === 'touchmove' ? ev.touches[0].clientY : ev.clientY;
+                        let dx = currentX - startX;
+                        let dy = currentY - startY;
+                        
+                        if(Math.abs(dx) > 3 || Math.abs(dy) > 3) isDraggingNode = true;
+                        
+                        if(isDraggingNode) {
+                            let newLeft = origLeft + (dx / rect.width) * 100;
+                            let newTop = origTop + (dy / rect.height) * 100;
+                            node.style.left = newLeft + '%';
+                            node.style.top = newTop + '%';
+                            
+                            let id = node.id.replace('node-', '');
+                            if(currentCategory === 'global' && theoryData.global.variations[0].nodes[id]) {
+                                theoryData.global.variations[0].nodes[id].x = newLeft;
+                                theoryData.global.variations[0].nodes[id].y = newTop;
+                                
+                                try {
+                                    let saved = JSON.parse(localStorage.getItem('mapaTonalPositions')) || {};
+                                    saved[id] = { x: newLeft, y: newTop };
+                                    localStorage.setItem('mapaTonalPositions', JSON.stringify(saved));
+                                } catch(e){}
+                            }
+                            drawLines();
+                        }
+                    };
+
+                    const handleEnd = () => {
+                        document.removeEventListener('mousemove', handleMove);
+                        document.removeEventListener('mouseup', handleEnd);
+                        document.removeEventListener('touchmove', handleMove);
+                        document.removeEventListener('touchend', handleEnd);
+                        setTimeout(() => isDraggingNode = false, 50);
+                    };
+
+                    document.addEventListener('mousemove', handleMove);
+                    document.addEventListener('mouseup', handleEnd);
+                    document.addEventListener('touchmove', handleMove, {passive: false});
+                    document.addEventListener('touchend', handleEnd);
+                };
+
+                node.addEventListener('mousedown', handleStart);
+                node.addEventListener('touchstart', handleStart, {passive: true});
+            });
+        }
+
+        function drawLines() {
+            const svg = document.getElementById('svgLines'); if(!svg || svg.style.display === 'none') return;
+            svg.innerHTML = ''; const isDark = document.documentElement.classList.contains('dark');
+            const dashedColor = isDark ? '#475569' : '#94a3b8'; 
+            const hexColors = { red: isDark ? '#f87171' : '#ef4444', orange: isDark ? '#fb923c' : '#f97316', emerald: isDark ? '#34d399' : '#10b981', teal: isDark ? '#2dd4bf' : '#14b8a6', blue: isDark ? '#60a5fa' : '#3b82f6', purple: isDark ? '#c084fc' : '#a855f7', fuchsia: isDark ? '#e879f9' : '#d946ef', amber: isDark ? '#fbbf24' : '#f59e0b' };
+
+            let defs = `<defs><marker id="arrow-dashed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L8,5 L0,9 z" fill="${dashedColor}"/></marker>`;
+            Object.keys(hexColors).forEach(c => { defs += `<marker id="arrow-${c}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L8,5 L0,9 z" fill="${hexColors[c]}"/></marker>`; });
+            defs += `</defs>`; svg.innerHTML = defs;
+
+            function getPos(id) { const el = document.getElementById(`node-${id}`); if (!el) return null; return { x: el.offsetLeft, y: el.offsetTop }; }
+
+            function connect(id1, id2, type, colorName = null) {
+                const p1 = getPos(id1); const p2 = getPos(id2); if (!p1 || !p2) return;
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const dx = p2.x - p1.x; const dy = p2.y - p1.y;
+                const midX = (p1.x + p2.x) / 2 - (dy * 0.15); const midY = (p1.y + p2.y) / 2 + (dx * 0.15);
+                let d = `M ${p1.x},${p1.y} Q ${midX},${midY} ${p2.x},${p2.y}`;
+
+                if (type === 'dashed') { path.setAttribute('stroke', dashedColor); path.setAttribute('stroke-width', '3'); path.setAttribute('stroke-dasharray', '8,8'); path.setAttribute('marker-end', 'url(#arrow-dashed)'); } 
+                else { path.setAttribute('stroke', hexColors[colorName]); path.setAttribute('stroke-width', '4'); path.setAttribute('class', 'animated-line'); path.setAttribute('marker-end', `url(#arrow-${colorName})`); }
+                path.setAttribute('d', d); path.setAttribute('fill', 'none'); svg.appendChild(path);
+            }
+
+            const varData = theoryData[currentCategory].variations.find(v => v.id === currentVariation);
+            if (varData.links) {
+                varData.links.forEach(l => { 
+                    if (currentCategory === 'global') {
+                        let n1 = varData.nodes[l.from]; let n2 = varData.nodes[l.to];
+                        if (!n1 || !n2 || !activeFilters[n1.group] || !activeFilters[n2.group]) return;
+                    }
+                    if(l.type === 'dashed') connect(l.from, l.to, 'dashed'); else connect(l.from, l.to, 'solid', l.color); 
+                });
+            }
+        }
+
+        window.addNodeToTimeline = function(nodeId, fallbackName, fallbackColor, fallbackNotesStr) {
+            if(isDraggingNode) return; 
+            
+            let node = null;
+            if (currentCategory === 'global') node = theoryData.global.variations[0].nodes[nodeId];
+            if (!node) node = { id: nodeId, name: fallbackName.replace(/maj7|m7|7|m7\(b5\)|dim7/,''), type: fallbackName.match(/maj7|m7\(b5\)|m7|7|dim7/)?.[0] || '', color: fallbackColor, notes: JSON.parse(fallbackNotesStr.replace(/&quot;/g, '"')) };
+
+            if (!synth) toggleMasterAudio().then(() => { if(synth) playChordDirect(node.notes); });
+            else playChordDirect(node.notes);
+
+            let pcs = node.notes.map(n => n.replace(/\d/g, ''));
+            let insertionMode = document.getElementById('insertionModeSelect').value;
+
+            if (insertionMode === 'interactive_vl' && currentProgression.length > 0) {
+                showInteractiveVLModal(node, pcs);
+            } else {
+                // MODIFICACIÓN: Forzar el bajo entre C2 y C3 (Midi 36 a 48)
+                let pcIdx = getMidiIdx(pcs[0]);
+                let bassMidi = 36 + pcIdx; // C2 a B2.
+                let upperMidiVoices = [];
+                if (currentProgression.length === 0 || insertionMode === 'root') {
+                    upperMidiVoices = generateInitialVoicing(pcs);
+                } else {
+                    let prevChord = currentProgression[currentProgression.length - 1];
+                    upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices);
+                }
+                pushToProgression(node, bassMidi, upperMidiVoices, node.name + (node.type || ''));
+            }
+        }
+
+        function pushToProgression(node, bassMidi, upperMidiVoices, slashName) {
+            currentProgression.push({ nodeId: node.id, name: slashName, color: node.color, bassMidi, upperMidiVoices, originalNotes: node.notes, originalDeg: node.deg });
+            renderTimeline();
+        }
+
+        window.showInteractiveVLModal = function(node, pcs) {
+            document.getElementById('ivl_chord_name').textContent = node.name + (node.type || '');
+            const optionsContainer = document.getElementById('ivl_options');
+            optionsContainer.innerHTML = '';
+            
+            let upperMidiVoices = calculateLinkedVoicing(pcs, currentProgression[currentProgression.length - 1].upperMidiVoices);
+            let rootIdx = getMidiIdx(pcs[0]);
+            let intervals = chordIntervals[node.type] || [0, 4, 7];
+            
+            intervals.forEach((interval, idx) => {
+                // MODIFICACIÓN: Forzar el bajo seleccionado entre C2 y C3 (Midi 36 a 48)
+                let bassNoteMidi = 36 + ((rootIdx + interval) % 12);
+                let bassNoteName = chromaticScale[(rootIdx + interval) % 12];
+                let isRoot = idx === 0;
+                let slashName = isRoot ? node.name + (node.type || '') : `${node.name + (node.type || '')}/${bassNoteName}`;
+                let invName = isRoot ? 'Fundamental' : idx === 1 ? '1ra Inversión' : idx === 2 ? '2da Inversión' : '3ra Inversión';
+                
+                let btn = document.createElement('button');
+                btn.className = `flex flex-col items-center justify-center p-4 rounded-xl border-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-all`;
+                btn.innerHTML = `<span class="text-xl font-black text-slate-800 dark:text-white">${slashName}</span><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">${invName}</span>`;
+                
+                btn.onclick = () => { pushToProgression(node, bassNoteMidi, upperMidiVoices, slashName); closeInteractiveVLModal(); };
+                optionsContainer.appendChild(btn);
+            });
+            document.getElementById('interactiveVLModal').classList.remove('hidden');
+        }
+        
+        window.closeInteractiveVLModal = function() { document.getElementById('interactiveVLModal').classList.add('hidden'); }
+        window.removeFromProgression = function(index) { currentProgression.splice(index, 1); renderTimeline(); }
+        window.clearProgression = function() { currentProgression = []; renderTimeline(); }
+
+        // MODIFICACIÓN: Render de la línea de tiempo mostrando la ficha completa del acorde (deg incluido)
+        function renderTimeline() {
+            const container = document.getElementById('timelineDropzone');
+            if (currentProgression.length === 0) { container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500"><i class="fa-solid fa-hand-pointer mb-1 opacity-50"></i><span class="text-[9px] lg:text-[10px] font-bold text-center">Toca cualquier acorde en el mapa para añadirlo</span></div>`; return; }
+            container.innerHTML = '';
+            currentProgression.forEach((chord, i) => {
+                let degHtml = chord.originalDeg ? `<div class="mt-1 text-[8px] md:text-[9px] px-2 py-0.5 rounded-full bg-white/50 dark:bg-black/20 text-${chord.color}-800 dark:text-${chord.color}-200 text-center w-[90%] shadow-sm leading-tight break-words"><span class="font-black tracking-wider">${chord.originalDeg}</span></div>` : '';
+                container.innerHTML += `
+                    <div class="relative flex-shrink-0 px-6 py-2 h-auto min-h-[60px] lg:min-h-[75px] w-auto min-w-[90px] rounded-xl border-2 border-${chord.color}-400 bg-${chord.color}-50 dark:bg-${chord.color}-900/40 flex flex-col items-center justify-center shadow-sm" id="timeline-chord-${i}">
+                        <span class="text-sm lg:text-xl font-black tracking-tight text-${chord.color}-700 dark:text-${chord.color}-200">${chord.name}</span>
+                        ${degHtml}
+                        <button type="button" onclick="removeFromProgression(${i})" class="absolute -top-2 -right-2 bg-slate-800 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center shadow-md hover:bg-red-500 transition-colors z-50 cursor-pointer"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                `;
+            });
+            container.scrollLeft = container.scrollWidth;
+        }
+
+        async function playTimelineProgression() {
+            if (currentProgression.length === 0 || isPlayingProgression) return;
+            if (!synth) await toggleMasterAudio();
+            isPlayingProgression = true;
+            document.getElementById('playProgBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            document.getElementById('playProgBtn').classList.replace('bg-indigo-600', 'bg-emerald-600');
+            const chordDuration = 1.5;
+            
+            currentProgression.forEach((chord, index) => {
+                setTimeout(() => {
+                    const now = Tone.now(); synth.releaseAll();
+                    let allMidi = [chord.bassMidi, ...chord.upperMidiVoices];
+                    let allNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
+                    let style = document.getElementById('playbackStyleSelect').value;
+
+                    if (style === 'strum') allNotes.forEach((n, i) => synth.triggerAttackRelease(n, '2n', now + (i * 0.03)));
+                    else if (style === 'arpeggio') allNotes.forEach((n, i) => synth.triggerAttackRelease(n, '4n', now + (i * 0.25)));
+                    else if (style === 'bass_chord') { synth.triggerAttackRelease(allNotes[0], '2n', now); allNotes.slice(1).forEach((n, i) => synth.triggerAttackRelease(n, '8n', now + 0.35 + (i * 0.02))); allNotes.slice(1).forEach((n, i) => synth.triggerAttackRelease(n, '8n', now + 0.75 + (i * 0.02))); }
+                    
+                    const el = document.getElementById(`timeline-chord-${index}`);
+                    if(el) { el.classList.add(`ring-4`, `ring-${chord.color}-500/50`, 'transform', 'scale-105'); setTimeout(() => el.classList.remove(`ring-4`, `ring-${chord.color}-500/50`, 'transform', 'scale-105'), chordDuration * 1000 * 0.8); }
+                    
+                    if (currentCategory === 'global' && chord.nodeId) {
+                        const mapNode = document.getElementById(`node-${chord.nodeId}`);
+                        if (mapNode) { mapNode.classList.add('node-playing'); setTimeout(() => mapNode.classList.remove('node-playing'), chordDuration * 1000 * 0.8); }
+                    }
+                }, index * chordDuration * 1000);
+            });
+
+            setTimeout(() => {
+                isPlayingProgression = false;
+                document.getElementById('playProgBtn').innerHTML = '<i class="fa-solid fa-play"></i> <span class="hidden sm:inline">Reproducir Enlazado</span>';
+                document.getElementById('playProgBtn').classList.replace('bg-emerald-600', 'bg-indigo-600');
+            }, currentProgression.length * chordDuration * 1000);
+        }
+
+        window.addEventListener('resize', () => { requestAnimationFrame(() => { drawLines(); }); });
+        window.onload = () => { updateTone(); };
+    </script>
+</body>
+</html>
