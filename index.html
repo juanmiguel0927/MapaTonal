@@ -221,8 +221,8 @@
                 <button onclick="changeZoom(-0.1)" class="w-10 h-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition transform hover:scale-105 active:scale-95">
                     <i class="fa-solid fa-minus"></i>
                 </button>
-                <button onclick="resetZoom()" class="w-10 h-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition transform hover:scale-105 active:scale-95">
-                    <i class="fa-solid fa-expand"></i>
+                <button onclick="toggleFullScreen()" class="w-10 h-10 bg-white/90 dark:bg-slate-800/90 backdrop-blur rounded-full shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition transform hover:scale-105 active:scale-95">
+                    <i id="expandIcon" class="fa-solid fa-expand"></i>
                 </button>
             </div>
 
@@ -1113,6 +1113,39 @@
             lastScale = 1;
             updateZoomUI();
         };
+
+        window.toggleFullScreen = function() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+                const elem = document.documentElement;
+                if (elem.requestFullscreen) { elem.requestFullscreen(); }
+                else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); } // iOS Safari
+                else if (elem.mozRequestFullScreen) { elem.mozRequestFullScreen(); } // Firefox
+                else if (elem.msRequestFullscreen) { elem.msRequestFullscreen(); } // IE/Edge antiguo
+            } else {
+                if (document.exitFullscreen) { document.exitFullscreen(); }
+                else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+                else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); }
+                else if (document.msExitFullscreen) { document.msExitFullscreen(); }
+            }
+            // Retrasamos un instante el reseteo de zoom para que el navegador recalcule su nuevo tamaño de pantalla
+            setTimeout(resetZoom, 150); 
+        };
+
+        // Escuchar si el usuario sale de pantalla completa con la tecla ESC
+        document.addEventListener('fullscreenchange', updateFullscreenIcon);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('mozfullscreenchange', updateFullscreenIcon);
+        document.addEventListener('MSFullscreenChange', updateFullscreenIcon);
+
+        function updateFullscreenIcon() {
+            const icon = document.getElementById('expandIcon');
+            if (!icon) return;
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+                icon.classList.replace('fa-expand', 'fa-compress');
+            } else {
+                icon.classList.replace('fa-compress', 'fa-expand');
+            }
+        }
 
         function initZoom() {
             const scrollArea = document.getElementById('scrollArea');
