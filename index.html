@@ -46,11 +46,12 @@
             pointer-events: none;
             z-index: 0;
             text-transform: uppercase;
-            font-size: clamp(2rem, 3.5vw, 4rem);
-            letter-spacing: 0.1em;
+            font-size: clamp(2.2rem, 3.2vw, 3.6rem);
+            letter-spacing: 0.12em;
+            white-space: nowrap;
         }
-        .light .zone-text { opacity: 0.14; text-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
-        .dark .zone-text { opacity: 0.09; text-shadow: 2px 2px 15px rgba(255,255,255,0.05); }
+        .light .zone-text { opacity: 0.16; text-shadow: 2px 2px 10px rgba(0,0,0,0.05); }
+        .dark .zone-text { opacity: 0.11; text-shadow: 2px 2px 15px rgba(255,255,255,0.05); }
 
         .node-circle { 
             transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.25s ease, filter 0.25s ease; 
@@ -332,7 +333,7 @@
                             <input type="checkbox" id="f_diatonic" checked onchange="applyFilters()" class="w-3.5 h-3.5 rounded text-indigo-600"> Diatónicos
                         </label>
                         <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                            <input type="checkbox" id="f_subV_main" checked onchange="applyFilters()" class="w-3.5 h-3.5 rounded text-indigo-600"> SubV7 / I
+                            <input type="checkbox" id="f_subV_main" onchange="applyFilters()" class="w-3.5 h-3.5 rounded text-indigo-600"> SubV7 / I
                         </label>
                     </div>
                 </div>
@@ -454,8 +455,8 @@
                             <polyline points="50,58 100,100" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
                         </svg>
                         
-                        <div class="zone-text text-blue-900 dark:text-blue-400 text-left" style="top: 3%; left: 3%;">SUBDOMINANTE</div>
-                        <div class="zone-text text-red-900 dark:text-red-400 text-right" style="top: 3%; right: 3%;">DOMINANTE</div>
+                        <div class="zone-text text-blue-900 dark:text-blue-400 text-center" style="top: 2.5%; left: 26%; transform: translateX(-50%);">SUBDOMINANTE</div>
+                        <div class="zone-text text-red-900 dark:text-red-400 text-center" style="top: 2.5%; left: 74%; transform: translateX(-50%);">DOMINANTE</div>
                         <div class="zone-text text-emerald-900 dark:text-emerald-400 text-center" style="bottom: 3%; left: 50%; transform: translateX(-50%);">TÓNICA</div>
                     </div>
 
@@ -601,7 +602,7 @@
         
         let activeFilters = {
             diatonic: true,
-            subV_main: true,
+            subV_main: false,
             sec_II: true, sec_III: true, sec_IV: true, sec_V: true, sec_VI: true,
             sat_ii: true, sat_subv: true, sat_subii: true, sat_dim: true,
             mod_tonic: true, mod_aeolian: true, mod_phrygian: true, mod_mixolydian: true, mod_locrian: true
@@ -669,7 +670,6 @@
         }
 
         // Motor de Ortografía Musical Exacta para 1ra, 3ra, 5ta y 7ma del acorde
-        // Garantiza que A7 tenga [A, C#, E, G] y nunca Db, o que D7 tenga [D, F#, A, C]
         function getSpelledChordPCs(rootStr, type) {
             const intervals = chordIntervals[type] || [0, 4, 7, 10];
             const degreeSteps = intervals.length === 4 ? [0, 2, 4, 6] : [0, 2, 4];
@@ -762,25 +762,14 @@
             return voicing.sort((a,b) => a-b); 
         }
 
-        /**
-         * ALGORITMO ESTRICTO DE ENLACE ARMÓNICO (VOICE LEADING):
-         * Se ejecuta SIEMPRE para las voces superiores sin importar el modo de bajo.
-         * Regla 1: Si existen notas comunes (misma clase de altura entre el acorde anterior y el nuevo),
-         *          esas notas comunes SE QUEDAN FIJAS en la misma voz y altura MIDI exacta.
-         *          Las demás voces se mueven por el camino más corto a las notas restantes del acorde.
-         * Regla 2: Si NO hay notas comunes entre ambos acordes, la 1ra voz (voz superior / soprano)
-         *          busca la nota más cercana del siguiente acorde, y las voces inferiores (2da, 3ra, 4ta)
-         *          se acomodan en posición cerrada inmediatamente debajo de la 1ra voz.
-         */
         function calculateLinkedVoicing(targetPCs, prevMidiVoices) {
             if (!prevMidiVoices || prevMidiVoices.length === 0) {
                 return generateInitialVoicing(targetPCs);
             }
 
-            const sortedPrev = [...prevMidiVoices].sort((a, b) => a - b); // de voz más grave a 1ra voz (soprano)
+            const sortedPrev = [...prevMidiVoices].sort((a, b) => a - b);
             const numVoices = sortedPrev.length;
 
-            // Obtener clases de altura únicas del acorde objetivo
             const targetPitchClasses = [];
             targetPCs.forEach(pcStr => {
                 const pc = getMidiIdx(pcStr);
@@ -790,7 +779,6 @@
                 targetPitchClasses.push(getMidiIdx(targetPCs[0]));
             }
 
-            // Función auxiliar para hallar el MIDI más cercano de una clase de altura a una nota dada
             function closestMidiOfPC(pc, refMidi) {
                 const baseOct = Math.floor(refMidi / 12);
                 const candidates = [
@@ -802,23 +790,20 @@
                 return candidates[0];
             }
 
-            // 1. Detectar notas comunes exactas entre las voces anteriores y las clases de altura del nuevo acorde
             const lockedVoiceIndices = new Set();
             const usedTargetPCs = new Set();
             const resultVoicing = new Array(numVoices).fill(null);
 
-            // Recorrer de la 1ra voz (superior) hacia abajo para priorizar mantener notas comunes en voces superiores
             for (let i = numVoices - 1; i >= 0; i--) {
                 const prevMidi = sortedPrev[i];
                 const prevPC = ((prevMidi % 12) + 12) % 12;
                 if (targetPitchClasses.includes(prevPC) && !usedTargetPCs.has(prevPC)) {
-                    resultVoicing[i] = prevMidi; // La nota común se queda exactamente donde está
+                    resultVoicing[i] = prevMidi;
                     lockedVoiceIndices.add(i);
                     usedTargetPCs.add(prevPC);
                 }
             }
 
-            // CASO A: HAY AL MENOS UNA NOTA COMÚN
             if (lockedVoiceIndices.size > 0) {
                 const remainingPCs = targetPitchClasses.filter(pc => !usedTargetPCs.has(pc));
                 const freeIndices = [];
@@ -842,12 +827,10 @@
                         movementCost += Math.abs(cMidi - sortedPrev[vIdx]);
                     }
 
-                    // Penalizar si hay cruce de voces o si dos voces tocan el mismo MIDI exacto
                     let crossingPenalty = 0;
                     for (let k = 0; k < numVoices - 1; k++) {
                         if (candidate[k] >= candidate[k + 1]) crossingPenalty += 50;
                     }
-                    // Penalizar si la apertura total entre voz 4 y voz 1 supera más de una octava y cuarta (>15 semitonos)
                     const spread = Math.max(...candidate) - Math.min(...candidate);
                     if (spread > 15) crossingPenalty += (spread - 15) * 8;
 
@@ -863,9 +846,6 @@
                 }
             }
 
-            // CASO B: NO HAY NOTAS COMUNES
-            // La 1ra voz (soprano = sortedPrev[numVoices - 1]) busca la nota más cercana del siguiente acorde,
-            // y las demás voces se arman en disposición cerrada hacia abajo a partir de esa 1ra voz.
             const prevSoprano = sortedPrev[numVoices - 1];
             let bestNoCommonVoicing = null;
             let minSopranoDist = Infinity;
@@ -874,11 +854,9 @@
             for (let pc of targetPitchClasses) {
                 let candSoprano = closestMidiOfPC(pc, prevSoprano);
 
-                // Mantener la 1ra voz dentro de un registro cómodo (F#4=66 a A5=81)
                 if (candSoprano < 66) candSoprano += 12;
                 if (candSoprano > 82) candSoprano -= 12;
 
-                // Construir las demás voces en posición cerrada estrictamente debajo de candSoprano
                 const chordClose = [candSoprano];
                 let currentTop = candSoprano;
 
@@ -917,7 +895,6 @@
             return (bestNoCommonVoicing || generateInitialVoicing(targetPCs)).sort((a, b) => a - b);
         }
 
-        // Ejecutar una nota individual al hacer clic o deslizar sobre el teclado
         async function triggerSinglePianoKey(midiNote, keyEl) {
             if (!isAudioInitialized) {
                 await toggleMasterAudio();
@@ -997,7 +974,6 @@
             });
         }
 
-        // Formatea el nombre de una nota MIDI usando la ortografía exacta del acorde activo
         function formatMidiWithChordSpelling(midiNote, chordPCs) {
             const oct = Math.floor(midiNote / 12) - 1;
             const targetPC = ((midiNote % 12) + 12) % 12;
@@ -1047,16 +1023,16 @@
 
         function getSavedPos(id, defaultX, defaultY) {
             try {
-                let saved = JSON.parse(localStorage.getItem('mapaTonalPos_v4')) || {};
+                let saved = JSON.parse(localStorage.getItem('mapaTonalPos_v5')) || {};
                 if (saved[id]) return saved[id];
             } catch (e) {}
             return { x: defaultX, y: defaultY };
         }
 
         window.resetNodePositions = function() {
-            try { localStorage.removeItem('mapaTonalPos_v4'); } catch(e) {}
+            try { localStorage.removeItem('mapaTonalPos_v5'); } catch(e) {}
             updateTone();
-            showToast('Posiciones restauradas');
+            showToast('Posiciones predeterminadas restauradas');
         };
 
         window.toggleSidebar = function() {
@@ -1207,33 +1183,33 @@
             const dimSubMainRoot = getSpelledChordPCs(r.bII, '7')[1];
 
             let globalNodes = {
-                // NÚCLEO DIATÓNICO
-                'Imaj7':   { id: 'Imaj7',   filterCat: 'diatonic', name: r.I,   type: 'maj7',   notes: getNotesForChord(r.I, 'maj7'),   color: 'emerald', format: 'node-tonic-core', deg: 'Imaj7',   ...getSavedPos('Imaj7', 50, 72) },
-                'VIm7':    { id: 'VIm7',    filterCat: 'diatonic', name: r.VI,  type: 'm7',     notes: getNotesForChord(r.VI, 'm7'),    color: 'emerald', format: 'node-main',       deg: 'VIm7',    ...getSavedPos('VIm7', 65, 73) },
-                'IIIm7':   { id: 'IIIm7',   filterCat: 'diatonic', name: r.III, type: 'm7',     notes: getNotesForChord(r.III, 'm7'),   color: 'emerald', format: 'node-main',       deg: 'IIIm7',   ...getSavedPos('IIIm7', 75, 86) },
-                'IVmaj7':  { id: 'IVmaj7',  filterCat: 'diatonic', name: r.IV,  type: 'maj7',   notes: getNotesForChord(r.IV, 'maj7'),  color: 'blue',    format: 'node-main',       deg: 'IVmaj7',  ...getSavedPos('IVmaj7', 33, 50) },
-                'IIm7':    { id: 'IIm7',    filterCat: 'diatonic', name: r.II,  type: 'm7',     notes: getNotesForChord(r.II, 'm7'),    color: 'blue',    format: 'node-main',       deg: 'IIm7',    ...getSavedPos('IIm7', 45, 42) },
-                'V7':      { id: 'V7',      filterCat: 'diatonic', name: r.V,   type: '7',      notes: getNotesForChord(r.V, '7'),      color: 'red',     format: 'node-main',       deg: 'V7',      ...getSavedPos('V7', 60, 48) },
-                'VIIm7b5': { id: 'VIIm7b5', filterCat: 'diatonic', name: r.VII, type: 'm7(b5)', notes: getNotesForChord(r.VII, 'm7(b5)'),color: 'orange',  format: 'node-main',       deg: 'VIIm7(b5)',...getSavedPos('VIIm7b5', 67, 57) },
+                // NÚCLEO DIATÓNICO (Coordenadas exactas de la imagen)
+                'Imaj7':   { id: 'Imaj7',   filterCat: 'diatonic', name: r.I,   type: 'maj7',   notes: getNotesForChord(r.I, 'maj7'),   color: 'emerald', format: 'node-tonic-core', deg: 'Imaj7',   ...getSavedPos('Imaj7', 47.0, 62.5) },
+                'VIm7':    { id: 'VIm7',    filterCat: 'diatonic', name: r.VI,  type: 'm7',     notes: getNotesForChord(r.VI, 'm7'),    color: 'emerald', format: 'node-main',       deg: 'VIm7',    ...getSavedPos('VIm7', 55.2, 69.2) },
+                'IIIm7':   { id: 'IIIm7',   filterCat: 'diatonic', name: r.III, type: 'm7',     notes: getNotesForChord(r.III, 'm7'),   color: 'emerald', format: 'node-main',       deg: 'IIIm7',   ...getSavedPos('IIIm7', 65.5, 73.5) },
+                'IVmaj7':  { id: 'IVmaj7',  filterCat: 'diatonic', name: r.IV,  type: 'maj7',   notes: getNotesForChord(r.IV, 'maj7'),  color: 'blue',    format: 'node-main',       deg: 'IVmaj7',  ...getSavedPos('IVmaj7', 35.2, 43.2) },
+                'IIm7':    { id: 'IIm7',    filterCat: 'diatonic', name: r.II,  type: 'm7',     notes: getNotesForChord(r.II, 'm7'),    color: 'blue',    format: 'node-main',       deg: 'IIm7',    ...getSavedPos('IIm7', 44.2, 36.2) },
+                'V7':      { id: 'V7',      filterCat: 'diatonic', name: r.V,   type: '7',      notes: getNotesForChord(r.V, '7'),      color: 'red',     format: 'node-main',       deg: 'V7',      ...getSavedPos('V7', 56.4, 41.2) },
+                'VIIm7b5': { id: 'VIIm7b5', filterCat: 'diatonic', name: r.VII, type: 'm7(b5)', notes: getNotesForChord(r.VII, 'm7(b5)'),color: 'orange',  format: 'node-main',       deg: 'VIIm7(b5)',...getSavedPos('VIIm7b5', 58.6, 50.2) },
 
                 // TÓNICA MENOR (INTERCAMBIO MODAL)
-                'Im7':      { id: 'Im7',      filterCat: 'mod_tonic', name: r.I,    type: 'm7',   notes: getNotesForChord(r.I, 'm7'),      color: 'teal', format: 'node-prep', deg: 'Im7',      ...getSavedPos('Im7', 46, 89) },
-                'bIIImaj7': { id: 'bIIImaj7', filterCat: 'mod_tonic', name: r.bIII, type: 'maj7', notes: getNotesForChord(r.bIII, 'maj7'), color: 'teal', format: 'node-prep', deg: 'bIIImaj7', ...getSavedPos('bIIImaj7', 37, 85) },
+                'Im7':      { id: 'Im7',      filterCat: 'mod_tonic', name: r.I,    type: 'm7',   notes: getNotesForChord(r.I, 'm7'),      color: 'teal', format: 'node-prep', deg: 'Im7',      ...getSavedPos('Im7', 38.2, 78.2) },
+                'bIIImaj7': { id: 'bIIImaj7', filterCat: 'mod_tonic', name: r.bIII, type: 'maj7', notes: getNotesForChord(r.bIII, 'maj7'), color: 'teal', format: 'node-prep', deg: 'bIIImaj7', ...getSavedPos('bIIImaj7', 47.0, 71.2) },
 
                 // SUSTITUTO TRITONAL DEL I (Y SUS SATÉLITES)
-                'SubV7':    { id: 'SubV7',    filterCat: 'subV_main', satType: 'subv',  name: r.bII,          type: '7',      notes: getNotesForChord(r.bII, '7'),          color: 'red',     format: 'node-prep', deg: 'subV7',         ...getSavedPos('SubV7', 53, 57) },
-                'SubIIm7':  { id: 'SubIIm7',  filterCat: 'subV_main', satType: 'subii', name: r.bVI,          type: 'm7',     notes: getNotesForChord(r.bVI, 'm7'),         color: 'fuchsia', format: 'node-prep', deg: 'subIIm7',       ...getSavedPos('SubIIm7', 53, 46) },
-                'DimSubV':  { id: 'DimSubV',  filterCat: 'subV_main', satType: 'dim',   name: dimSubMainRoot, type: 'm7(b5)', notes: getNotesForChord(dimSubMainRoot, 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/subV', ...getSavedPos('DimSubV', 44, 57) },
+                'SubV7':    { id: 'SubV7',    filterCat: 'subV_main', satType: 'subv',  name: r.bII,          type: '7',      notes: getNotesForChord(r.bII, '7'),          color: 'red',     format: 'node-prep', deg: 'subV7',         ...getSavedPos('SubV7', 51.5, 52.0) },
+                'SubIIm7':  { id: 'SubIIm7',  filterCat: 'subV_main', satType: 'subii', name: r.bVI,          type: 'm7',     notes: getNotesForChord(r.bVI, 'm7'),         color: 'fuchsia', format: 'node-prep', deg: 'subIIm7',       ...getSavedPos('SubIIm7', 50.8, 43.5) },
+                'DimSubV':  { id: 'DimSubV',  filterCat: 'subV_main', satType: 'dim',   name: dimSubMainRoot, type: 'm7(b5)', notes: getNotesForChord(dimSubMainRoot, 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/subV', ...getSavedPos('DimSubV', 44.5, 51.5) },
 
-                // INTERCAMBIO MODAL SUBDOMINANTE MENOR
-                'IVm7':         { ...modalData[0], format: 'node-prep', ...getSavedPos('IVm7', 24, 62) },
-                'bVImaj7':      { ...modalData[1], format: 'node-prep', ...getSavedPos('bVImaj7', 17, 68) },
-                'bVII7':        { ...modalData[2], format: 'node-prep', ...getSavedPos('bVII7', 11, 76) },
-                'IIm7b5_modal': { ...modalData[3], format: 'node-prep', ...getSavedPos('IIm7b5_modal', 32, 64) },
-                'bIImaj7':      { ...modalData[4], format: 'node-prep', ...getSavedPos('bIImaj7', 7, 85) },
-                'bVIIm7':       { ...modalData[5], format: 'node-prep', ...getSavedPos('bVIIm7', 25, 74) },
-                'bVIImaj7':     { ...modalData[6], format: 'node-prep', ...getSavedPos('bVIImaj7', 15, 91) },
-                'bVI7':         { ...modalData[7], format: 'node-prep', ...getSavedPos('bVI7', 23, 84) }
+                // INTERCAMBIO MODAL SUBDOMINANTE MENOR (Abanico Izquierdo)
+                'IVm7':         { ...modalData[0], format: 'node-prep', ...getSavedPos('IVm7', 29.0, 52.2) },
+                'bVImaj7':      { ...modalData[1], format: 'node-prep', ...getSavedPos('bVImaj7', 24.3, 56.8) },
+                'bVII7':        { ...modalData[2], format: 'node-prep', ...getSavedPos('bVII7', 20.2, 62.5) },
+                'IIm7b5_modal': { ...modalData[3], format: 'node-prep', ...getSavedPos('IIm7b5_modal', 34.4, 52.2) },
+                'bIImaj7':      { ...modalData[4], format: 'node-prep', ...getSavedPos('bIImaj7', 17.5, 69.2) },
+                'bVIIm7':       { ...modalData[5], format: 'node-prep', ...getSavedPos('bVIIm7', 27.0, 62.5) },
+                'bVIImaj7':     { ...modalData[6], format: 'node-prep', ...getSavedPos('bVIImaj7', 15.8, 76.0) },
+                'bVI7':         { ...modalData[7], format: 'node-prep', ...getSavedPos('bVI7', 24.3, 68.0) }
             };
 
             let globalLinks = [
@@ -1264,11 +1240,11 @@
             ];
 
             const secCoords = {
-                'II':  { target: 'IIm7',   root: r.II,  isMaj: false, v7:[41,23], ii:[34,11], dim:[46,12], subv:[50,23], subii:[56,12], dimsub:[42,32] },
-                'III': { target: 'IIIm7',  root: r.III, isMaj: false, v7:[85,78], ii:[93,69], dim:[95,79], subv:[85,90], subii:[94,94], dimsub:[77,95] },
-                'IV':  { target: 'IVmaj7', root: r.IV,  isMaj: true,  v7:[21,38], ii:[13,26], dim:[26,26], subv:[20,49], subii:[9,44],  dimsub:[12,55] },
-                'V':   { target: 'V7',     root: r.V,   isMaj: true,  v7:[64,31], ii:[61,17], dim:[70,18], subv:[73,33], subii:[81,22], dimsub:[76,43] },
-                'VI':  { target: 'VIm7',   root: r.VI,  isMaj: false, v7:[76,63], ii:[85,52], dim:[75,51], subv:[84,68], subii:[93,59], dimsub:[73,72] }
+                'II':  { target: 'IIm7',   root: r.II,  isMaj: false, v7:[38.7, 21.8], ii:[34.4, 13.5], dim:[41.5, 13.5], subv:[45.0, 21.2], subii:[45.7, 11.8], dimsub:[37.2, 29.8] },
+                'III': { target: 'IIIm7',  root: r.III, isMaj: false, v7:[74.3, 60.2], ii:[79.3, 53.5], dim:[79.6, 63.5], subv:[74.5, 70.0], subii:[79.8, 70.2], dimsub:[79.2, 76.8] },
+                'IV':  { target: 'IVmaj7', root: r.IV,  isMaj: true,  v7:[27.0, 33.8], ii:[21.8, 24.2], dim:[30.7, 24.2], subv:[26.4, 42.8], subii:[19.0, 38.2], dimsub:[20.7, 47.8] },
+                'V':   { target: 'V7',     root: r.V,   isMaj: true,  v7:[59.1, 24.2], ii:[57.1, 16.5], dim:[65.4, 37.8], subv:[63.7, 29.8], subii:[68.8, 21.2], dimsub:[54.5, 22.8] },
+                'VI':  { target: 'VIm7',   root: r.VI,  isMaj: false, v7:[67.4, 50.0], ii:[74.5, 40.5], dim:[65.2, 44.8], subv:[70.8, 54.8], subii:[76.1, 47.0], dimsub:[67.8, 61.2] }
             };
 
             Object.keys(secCoords).forEach(deg => {
@@ -1480,8 +1456,6 @@
             trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
         }
 
-        // Selección del bajo: si forceRoot=true va a la fundamental más cercana en el registro del bajo;
-        // si forceRoot=false elige la inversión más cercana al bajo anterior con ortografía exacta (ej. A7/C#)
         function computeSmartBass(pcs, prevBassMidi, forceRoot = false) {
             const rootIdx = getMidiIdx(pcs[0]);
             let defaultBassMidi = 36 + rootIdx;
@@ -1509,12 +1483,12 @@
                 const pcIdx = getMidiIdx(pc);
                 for (let oct = 2; oct <= 3; oct++) {
                     const candMidi = pcIdx + oct * 12;
-                    if (candMidi < 36 || candMidi > 55) continue; // Rango de bajo C2 a G3
+                    if (candMidi < 36 || candMidi > 55) continue;
                     const leap = Math.abs(candMidi - prevBassMidi);
                     if (leap < minLeap || (leap === minLeap && pIdx === 0)) {
                         minLeap = leap;
                         bestBassMidi = candMidi;
-                        bestPcName = pc; // Conserva la ortografía exacta del acorde (ej. C# en A7)
+                        bestPcName = pc;
                     }
                 }
             });
@@ -1522,7 +1496,6 @@
             return { bassMidi: bestBassMidi, bassPcName: bestPcName };
         }
 
-        // Recalcula toda la línea de tiempo garantizando que las voces superiores SIEMPRE estén enlazadas
         function trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63() {
             if (currentProgression.length === 0) return;
             const insertionMode = document.getElementById('insertionModeSelect').value;
@@ -1540,7 +1513,6 @@
                 let chosenBassStep = oldItem.chosenBassStep;
 
                 if (idx === 0) {
-                    // Primer acorde de la progresión: posición inicial limpia
                     upperMidiVoices = generateInitialVoicing(pcs);
                     if (insertionMode === 'interactive_vl' && chosenBassStep !== undefined && pcs[chosenBassStep]) {
                         const bassPc = pcs[chosenBassStep];
@@ -1553,7 +1525,6 @@
                     }
                 } else {
                     let prevChord = newProg[idx - 1];
-                    // Las voces superiores SIEMPRE se enlazan sin importar el modo de bajo
                     upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices);
 
                     if (insertionMode === 'root') {
@@ -1593,7 +1564,6 @@
             renderTimelineUI();
         }
 
-        // Modo Foco de Resolución al pasar el cursor
         window.handleNodeMouseEnter = function(nodeId) {
             if (!focusModeEnabled || currentCategory !== 'global' || isDraggingNode) return;
             const varData = theoryData.global.variations[0];
@@ -1871,9 +1841,9 @@
                                 theoryData.global.variations[0].nodes[id].x = newLeft;
                                 theoryData.global.variations[0].nodes[id].y = newTop;
                                 try {
-                                    let saved = JSON.parse(localStorage.getItem('mapaTonalPos_v4')) || {};
+                                    let saved = JSON.parse(localStorage.getItem('mapaTonalPos_v5')) || {};
                                     saved[id] = { x: newLeft, y: newTop };
-                                    localStorage.setItem('mapaTonalPos_v4', JSON.stringify(saved));
+                                    localStorage.setItem('mapaTonalPos_v5', JSON.stringify(saved));
                                 } catch(err){}
                             }
                             drawLines();
@@ -1993,13 +1963,13 @@
             
             const vw = scrollArea.clientWidth;
             const vh = scrollArea.clientHeight;
-            let idealZoom = Math.min(vw / 1950, vh / 1260) * 1.12;
-            idealZoom = Math.max(0.25, Math.min(0.88, idealZoom));
+            let idealZoom = Math.min(vw / 1950, vh / 1260) * 1.02;
+            idealZoom = Math.max(0.25, Math.min(0.85, idealZoom));
             applyZoom(idealZoom);
 
             setTimeout(() => {
-                scrollArea.scrollLeft = (1950 * currentZoom - vw) / 2;
-                scrollArea.scrollTop = (1260 * currentZoom - vh) / 2;
+                scrollArea.scrollLeft = Math.max(0, (1950 * currentZoom - vw) / 2);
+                scrollArea.scrollTop = Math.max(0, (1260 * currentZoom - vh) / 2);
             }, 60);
         };
 
@@ -2086,7 +2056,6 @@
             optionsContainer.innerHTML = '';
 
             let prevChord = currentProgression.length > 0 ? currentProgression[currentProgression.length - 1] : null;
-            // Las voces superiores SIEMPRE se enlazan respecto al acorde anterior (o posición cerrada inicial si es el 1ro)
             let upperMidiVoices = prevChord ? calculateLinkedVoicing(pcs, prevChord.upperMidiVoices) : generateInitialVoicing(pcs);
 
             const labels = ['Fundamental (Bajo en 1ra)', '1ra Inversión (Bajo en 3ra)', '2da Inversión (Bajo en 5ta)', '3ra Inversión (Bajo en 7ma)'];
@@ -2142,11 +2111,9 @@
             };
             if(!node) return;
 
-            // Obtener las clases de altura con la ortografía exacta de la triada/cuatriada (ej. A7 -> ['A', 'C#', 'E', 'G'])
             let pcs = getSpelledChordPCs(node.name, node.type);
             let insertionMode = document.getElementById('insertionModeSelect').value;
             
-            // En modo interactivo, permitir escoger a cuál inversión va el bajo
             if (!silent && insertionMode === 'interactive_vl') {
                 showInteractiveVLModal(node, pcs);
                 return;
@@ -2158,23 +2125,19 @@
             let slashName = node.name + (node.type || '');
 
             if (currentProgression.length === 0) {
-                // Primer acorde de la progresión
                 upperMidiVoices = generateInitialVoicing(pcs);
                 const bObj = computeSmartBass(pcs, null, true);
                 bassMidi = bObj.bassMidi;
                 chosenBassStep = 0;
             } else {
                 let prevChord = currentProgression[currentProgression.length - 1];
-                // SIEMPRE enlazar las voces superiores (notas comunes fijas o 1ra voz a la más cercana)
                 upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices);
                 
                 if (insertionMode === 'root') {
-                    // Bajo siempre en fundamental, pero voces superiores enlazadas
                     const bObj = computeSmartBass(pcs, prevChord.bassMidi, true);
                     bassMidi = bObj.bassMidi;
                     chosenBassStep = 0;
                 } else {
-                    // Bajo enlazado automático (busca la inversión más cercana)
                     const bObj = computeSmartBass(pcs, prevChord.bassMidi, false);
                     bassMidi = bObj.bassMidi;
                     chosenBassStep = Math.max(0, pcs.indexOf(bObj.bassPcName));
@@ -2187,14 +2150,12 @@
             finalizeChordAddition(node, bassMidi, upperMidiVoices, slashName, pcs, chosenBassStep, !silent);
         };
 
-        // Catálogo ampliado de 18 Progresiones Clásicas (Presets)
         window.loadPresetProgression = function(presetKey) {
             if (!presetKey) return;
             stopProgressionPlayback();
             currentProgression = [];
 
             const presetMap = {
-                // Jazz & Neo-Soul
                 'ii_v_i': ['IIm7', 'V7', 'Imaj7'],
                 'turnaround': ['Imaj7', 'V7_II', 'IIm7', 'V7', 'Imaj7'],
                 'rhythm_changes': ['Imaj7', 'VIm7', 'IIm7', 'V7', 'IIIm7', 'V7_II', 'IIm7', 'V7'],
@@ -2204,19 +2165,16 @@
                 'neosoul_walk': ['IIm7', 'IIIm7', 'IVmaj7', 'IVm7', 'Imaj7'],
                 'bossa_nova': ['Imaj7', 'DimV_II', 'IIm7', 'bVIIm7', 'Imaj7'],
 
-                // Pop, Rock & Anime
                 'pop_axis': ['Imaj7', 'V7', 'VIm7', 'IVmaj7'],
                 'fifties_prog': ['Imaj7', 'VIm7', 'IVmaj7', 'V7'],
                 'royal_road': ['IVmaj7', 'V7', 'IIIm7', 'VIm7'],
                 'creep_prog': ['Imaj7', 'V7_VI', 'IVmaj7', 'IVm7'],
                 'just_the_two': ['IVmaj7', 'V7_VI', 'VIm7', 'II_IV', 'V7_IV', 'IVmaj7'],
 
-                // Intercambio Modal & Cine
                 'plagal_minor': ['Imaj7', 'IVmaj7', 'IVm7', 'Imaj7'],
                 'mario_cadence': ['Imaj7', 'bVImaj7', 'bVII7', 'Imaj7'],
                 'phrygian_color': ['Imaj7', 'bIImaj7', 'bVIIm7', 'bIImaj7', 'Imaj7'],
 
-                // Cadenas y Enlaces
                 'dim_climb': ['Imaj7', 'DimV_II', 'IIm7', 'DimV_III', 'IIIm7', 'VIm7', 'IIm7', 'V7', 'Imaj7'],
                 'secondary_chain': ['Imaj7', 'V7_III', 'V7_VI', 'V7_II', 'V7_V', 'V7', 'Imaj7']
             };
@@ -2234,7 +2192,6 @@
             document.getElementById('presetSelect').value = '';
         };
 
-        // Mover un acorde a la izquierda o derecha y recalcular el Voice Leading
         window.moveChordInTimeline = function(index, direction) {
             const newIndex = index + direction;
             if (newIndex < 0 || newIndex >= currentProgression.length) return;
@@ -2244,7 +2201,6 @@
             trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
         };
 
-        // Copiar cifrado al portapapeles
         window.copyProgressionText = function() {
             if (currentProgression.length === 0) {
                 showToast('Añade acordes primero para copiar');
@@ -2278,7 +2234,6 @@
                         <span class="text-xs lg:text-sm font-black tracking-tight text-${chord.color}-700 dark:text-${chord.color}-200 whitespace-nowrap">${chord.name}</span>
                         ${degHtml}
                         
-                        <!-- Controles de Reordenar Izquierda / Derecha -->
                         <div class="flex items-center gap-2 mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
                             ${i > 0 ? `<button type="button" onclick="event.stopPropagation(); moveChordInTimeline(${i}, -1)" class="text-[9px] text-slate-500 hover:text-indigo-600 dark:text-slate-400"><i class="fa-solid fa-chevron-left"></i></button>` : ''}
                             ${i < currentProgression.length - 1 ? `<button type="button" onclick="event.stopPropagation(); moveChordInTimeline(${i}, 1)" class="text-[9px] text-slate-500 hover:text-indigo-600 dark:text-slate-400"><i class="fa-solid fa-chevron-right"></i></button>` : ''}
