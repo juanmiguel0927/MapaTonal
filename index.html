@@ -192,6 +192,37 @@
             color: #ffffff !important;
             box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3), 0 0 12px rgba(245, 158, 11, 0.8) !important;
         }
+        .key-common-tone {
+            outline: 2.5px solid #fbbf24 !important;
+            outline-offset: -2px;
+            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.25), 0 0 14px rgba(251, 191, 36, 0.95) !important;
+        }
+        .key-common-tone::after {
+            content: '•';
+            position: absolute;
+            top: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fef08a;
+            font-size: 11px;
+            line-height: 1;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        @keyframes quizPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.22); }
+        }
+        .quiz-correct-node {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 60px rgba(16, 185, 129, 0.95) !important;
+            animation: quizPulse 0.6s ease-in-out 2;
+            z-index: 80 !important;
+        }
+        .quiz-wrong-node {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 60px rgba(239, 68, 68, 0.95) !important;
+            z-index: 80 !important;
+        }
     </style>
 </head>
 
@@ -219,6 +250,10 @@
             </div>
 
             <div class="flex items-center gap-1.5 md:gap-2.5">
+                <!-- Botón Modo Entrenamiento Auditivo (Quiz) -->
+                <button id="earQuizHeaderBtn" onclick="toggleEarQuizMode()" class="px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition shadow-sm" title="Entrenamiento Auditivo: ¿Qué acorde sonó?">
+                    <i class="fa-solid fa-ear-listen"></i> <span class="hidden sm:inline">Quiz Auditivo</span>
+                </button>
                 <!-- Toggle Modo Foco -->
                 <button id="focusModeBtn" onclick="toggleFocusMode()" class="px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition" title="Iluminar rutas al pasar el cursor">
                     <i class="fa-solid fa-bullseye"></i> <span class="hidden md:inline">Foco Ruta: ON</span>
@@ -307,6 +342,18 @@
                     <button id="lbl_both" onclick="setLabelMode('both')" class="py-1 rounded-lg text-[10px] font-black transition bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm">Ambos</button>
                     <button id="lbl_name" onclick="setLabelMode('name')" class="py-1 rounded-lg text-[10px] font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900">Acorde</button>
                     <button id="lbl_deg" onclick="setLabelMode('deg')" class="py-1 rounded-lg text-[10px] font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900">Análisis</button>
+                </div>
+            </div>
+
+            <!-- Conmutador de Armonía Extendida (Cuatríadas vs Tensiones 9/13/Alt) -->
+            <div class="space-y-1 pt-1.5 border-t border-slate-200 dark:border-slate-800">
+                <h3 class="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Color Armónico (Voicing)</span>
+                    <span id="tensionBadgeInfo" class="text-[8px] font-black text-amber-600 dark:text-amber-400 hidden">JAZZ / NEO-SOUL</span>
+                </h3>
+                <div class="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                    <button id="harm_std" onclick="setHarmonicColorMode(false)" class="py-1 rounded-lg text-[10px] font-black transition bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm">Cuatríadas (7)</button>
+                    <button id="harm_ext" onclick="setHarmonicColorMode(true)" class="py-1 rounded-lg text-[10px] font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900">Tensiones (9/b9/13)</button>
                 </div>
             </div>
 
@@ -439,6 +486,38 @@
                 </div>
             </div>
 
+            <!-- Barra Flotante de Entrenamiento Auditivo (Ear Training Quiz) -->
+            <div id="earQuizPanel" class="hidden bg-gradient-to-r from-amber-500/15 via-indigo-500/15 to-emerald-500/15 dark:from-amber-900/40 dark:via-indigo-900/40 dark:to-emerald-900/40 border-b border-amber-300/70 dark:border-amber-700/70 px-4 py-2 z-30 flex flex-wrap items-center justify-between gap-2 backdrop-blur-md shadow-sm">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-sm">
+                        <i class="fa-solid fa-ear-listen text-xs"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">Entrenamiento Auditivo</span>
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-amber-300/60">
+                                Racha: <strong id="quizStreakVal" class="text-emerald-600 dark:text-emerald-400">0</strong> 🔥 | Aciertos: <strong id="quizScoreVal" class="text-indigo-600 dark:text-indigo-400">0/0</strong>
+                            </span>
+                        </div>
+                        <p id="quizStatusText" class="text-[11px] font-bold text-slate-700 dark:text-slate-200">Escucha la referencia tónica y luego adivina qué acorde del mapa está sonando.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <button onclick="playQuizTonicReference()" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1" title="Escuchar el acorde Tónica (Imaj7) para ubicar el oído">
+                        <i class="fa-solid fa-compass"></i> <span>1. Oír Tónica (I)</span>
+                    </button>
+                    <button onclick="replayQuizMysteryChord()" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1" title="Volver a escuchar el acorde misterioso">
+                        <i class="fa-solid fa-volume-high"></i> <span>2. Oír Misterioso</span>
+                    </button>
+                    <button onclick="startNewQuizRound()" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition flex items-center gap-1" title="Sortear otro acorde misterioso">
+                        <i class="fa-solid fa-forward-step"></i> <span>Siguiente Reto</span>
+                    </button>
+                    <button onclick="toggleEarQuizMode()" class="w-7 h-7 rounded-lg bg-slate-200/80 dark:bg-slate-800 hover:bg-red-100 dark:hover:bg-red-950 text-slate-600 dark:text-slate-300 hover:text-red-600 flex items-center justify-center text-xs transition" title="Salir del modo Quiz">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
             <!-- Área del Lienzo con Cámara / Zoom -->
             <div class="flex-grow relative overflow-auto custom-scrollbar w-full h-full touch-pan-x touch-pan-y" id="scrollArea">
                 <div id="zoomWrapper" class="relative pointer-events-auto origin-top-left w-[1950px] h-[1260px] transition-transform duration-75 ease-out"> 
@@ -496,6 +575,7 @@
                         <div id="keyboardLegend" class="hidden sm:flex items-center gap-2.5 ml-2 text-[9px] font-bold text-slate-500 dark:text-slate-400">
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span> Bajo: <strong id="activeBassLabel" class="text-indigo-600 dark:text-indigo-400">-</strong></span>
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Voces: <strong id="activeVoicesLabel" class="text-emerald-600 dark:text-emerald-400">-</strong></span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-amber-400 inline-block"></span> Nota Común: <strong id="activeCommonLabel" class="text-amber-600 dark:text-amber-400">-</strong></span>
                             <span class="text-[8px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/60"><i class="fa-solid fa-hand-pointer mr-0.5"></i> ¡Toca las teclas!</span>
                         </div>
                     </div>
@@ -564,10 +644,10 @@
                 <button onclick="closeHelpModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-100 hover:text-red-600 transition"><i class="fa-solid fa-times"></i></button>
             </div>
             <div class="space-y-3 text-xs lg:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                <p><strong>1. Enlace Armónico Siempre Activo y Ortografía Exacta:</strong> Sin importar qué modo de bajo elijas, las voces superiores <strong>siempre se enlazan</strong>: cuando dos acordes tienen <strong>notas comunes</strong>, estas se mantienen fijas en la misma voz y las demás se mueven a las notas más cercanas; si <strong>no hay nota común</strong>, la 1ra voz (superior) busca la nota más cercana del nuevo acorde. El selector inferior te permite decidir si el <strong>Bajo</strong> se enlaza automáticamente (ej. <code>A7/C#</code>), si prefieres elegir manualmente a cuál inversión va, o si el bajo se mantiene en fundamental.</p>
-                <p><strong>2. Teclado Interactivo en Vivo:</strong> Puedes <strong>hacer clic o deslizar tu dedo sobre las teclas del piano</strong> para tocar notas libres. Al sonar un acorde del mapa, el <strong>Bajo se ilumina en Azul/Índigo</strong> y las <strong>voces superiores en Verde Esmeralda</strong>.</p>
-                <p><strong>3. Modo Foco de Resolución:</strong> Al pasar el cursor sobre cualquier acorde en el mapa, los demás se atenuarán para mostrarte claramente qué acordes lo preparan y hacia dónde resuelve.</p>
-                <p><strong>4. Transposición Inteligente:</strong> Si armas una progresión en la Línea de Tiempo y luego cambias la <strong>Tonalidad</strong>, ¡toda tu progresión se transportará automáticamente respetando el enlace de voces y las inversiones correctas!</p>
+                <p><strong>1. Enlace Armónico con Indicador de Notas Comunes y Rotación (▲/▼):</strong> Las voces superiores <strong>siempre se enlazan</strong>. Las notas comunes que se mantienen inmóviles entre dos acordes se resaltan con un <strong>borde dorado en el piano</strong> y con una etiqueta <code>🔗</code> entre las tarjetas de la Línea de Tiempo. Además, puedes usar las flechas <strong>▲ / ▼</strong> en cada acorde de la línea de tiempo para rotar la posición melódica de la voz superior y escuchar distintas disposiciones.</p>
+                <p><strong>2. Conmutador de Color Armónico (Tensiones 9 / b9 / 13):</strong> En el menú izquierdo puedes alternar entre <strong>Cuatríadas (7)</strong> y <strong>Tensiones (Jazz/Neo-Soul)</strong>. Al activar tensiones, el motor sustituye la fundamental duplicada en las voces superiores por la 9na (o <code>b9</code> en dominantes secundarios hacia acordes menores, como <code>A7(b9) ➔ Dm7</code>).</p>
+                <p><strong>3. Modo Entrenamiento Auditivo (Quiz):</strong> Actívalo en la barra superior para poner a prueba tu oído. Escucha la referencia Tónica (<code>Imaj7</code>), reproduce el acorde misterioso y haz clic en el círculo del mapa que creas que sonó.</p>
+                <p><strong>4. Transposición Inteligente y Teclado en Vivo:</strong> Puedes tocar las teclas del piano directamente con el ratón o pantalla táctil, y al cambiar la tonalidad toda tu progresión se transportará respetando el enlace de voces.</p>
             </div>
             <button onclick="closeHelpModal()" class="mt-6 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black transition-colors shadow-md text-xs">¡Entendido!</button>
         </div>
@@ -599,6 +679,15 @@
         let isPianoVisible = true;
         let isSidebarCollapsed = false;
         let isMouseDownOnPiano = false;
+        let harmonicExtensionsEnabled = false;
+
+        // Estado del Modo Entrenamiento Auditivo (Quiz)
+        let earQuizActive = false;
+        let quizTargetNode = null;
+        let quizStreak = 0;
+        let quizCorrectCount = 0;
+        let quizTotalAttempts = 0;
+        let quizRoundSolved = false;
         
         let activeFilters = {
             diatonic: true,
@@ -713,6 +802,109 @@
                 }
                 return n;
             });
+        }
+
+        // Calcula la novena (mayor o b9) con ortografía correcta para el modo de Tensiones Jazz/Neo-Soul
+        function getSpelledNinthPC(rootStr, isFlatNine = false) {
+            const cleanRoot = rootStr;
+            const rootLetter = cleanRoot.charAt(0).toUpperCase();
+            const rootLetterIdx = letterNames.indexOf(rootLetter);
+            const rootSemi = getMidiIdx(cleanRoot);
+            const interval = isFlatNine ? 1 : 2;
+            const targetSemi = (rootSemi + interval) % 12;
+
+            if (rootLetterIdx !== -1) {
+                const degLetter = letterNames[(rootLetterIdx + 1) % 7];
+                const naturalSemi = letterBaseSemis[degLetter];
+                let diff = (targetSemi - naturalSemi + 12) % 12;
+                if (diff > 6) diff -= 12;
+                let noteName = degLetter;
+                if (diff === 1) noteName += '#';
+                else if (diff === -1) noteName += 'b';
+                if (!noteName.includes('##') && !noteName.includes('bb') && noteName !== 'Cb' && noteName !== 'Fb' && noteName !== 'B#' && noteName !== 'E#') {
+                    return noteName;
+                }
+            }
+            const sharpScale = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const flatScale  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+            return (isFlatNine || cleanRoot.includes('b')) ? flatScale[targetSemi] : sharpScale[targetSemi];
+        }
+
+        // Devuelve las 4 clases de altura para las voces superiores (en modo Tensiones reemplaza la fundamental por la 9na o b9)
+        function getVoicingPCsForNode(node) {
+            const basePCs = getSpelledChordPCs(node.name, node.type);
+            if (!harmonicExtensionsEnabled) {
+                return { upperPCs: basePCs, fullPCs: basePCs, extLabel: node.type || '' };
+            }
+
+            const degStr = node.deg || '';
+            const idStr = node.id || '';
+            const resolvesToMinor = idStr.endsWith('_II') || idStr.endsWith('_III') || idStr.endsWith('_VI') || degStr.includes('/II') || degStr.includes('/III') || degStr.includes('/VI');
+
+            if (node.type === 'maj7') {
+                const ninth = getSpelledNinthPC(node.name, false);
+                return {
+                    upperPCs: [ninth, basePCs[1], basePCs[2], basePCs[3]],
+                    fullPCs: [basePCs[0], basePCs[1], basePCs[2], basePCs[3], ninth],
+                    extLabel: 'maj9'
+                };
+            } else if (node.type === 'm7') {
+                const ninth = getSpelledNinthPC(node.name, false);
+                return {
+                    upperPCs: [ninth, basePCs[1], basePCs[2], basePCs[3]],
+                    fullPCs: [basePCs[0], basePCs[1], basePCs[2], basePCs[3], ninth],
+                    extLabel: 'm9'
+                };
+            } else if (node.type === '7') {
+                const useFlat9 = resolvesToMinor && !degStr.includes('subV');
+                const ninth = getSpelledNinthPC(node.name, useFlat9);
+                return {
+                    upperPCs: [ninth, basePCs[1], basePCs[2], basePCs[3]],
+                    fullPCs: [basePCs[0], basePCs[1], basePCs[2], basePCs[3], ninth],
+                    extLabel: useFlat9 ? '7(b9)' : '9'
+                };
+            }
+
+            return { upperPCs: basePCs, fullPCs: basePCs, extLabel: node.type || '' };
+        }
+
+        // Rota hacia arriba (+1) o hacia abajo (-1) la posición melódica de un voicing de 4 voces
+        function rotateUpperVoicing(midiVoices, direction = 1) {
+            if (!midiVoices || midiVoices.length < 2) return midiVoices;
+            let v = [...midiVoices].sort((a, b) => a - b);
+            if (direction > 0) {
+                let lowest = v.shift();
+                while (lowest <= v[v.length - 1]) lowest += 12;
+                v.push(lowest);
+                if (v[v.length - 1] > 84) v = v.map(n => n - 12);
+            } else {
+                let highest = v.pop();
+                while (highest >= v[0]) highest -= 12;
+                v.unshift(highest);
+                if (v[0] < 53) v = v.map(n => n + 12);
+            }
+            return v.sort((a, b) => a - b);
+        }
+
+        // Detecta qué notas MIDI (o clases de altura) se mantuvieron como notas comunes entre dos acordes consecutivos
+        function getCommonTonesBetween(prevUpperMidi, currUpperMidi, currChordPCs) {
+            if (!prevUpperMidi || !currUpperMidi || prevUpperMidi.length === 0) {
+                return { commonMidi: [], commonNames: [] };
+            }
+            const prevPCSet = new Set(prevUpperMidi.map(m => ((m % 12) + 12) % 12));
+            const commonMidi = [];
+            const commonNames = [];
+
+            currUpperMidi.forEach(m => {
+                const pc = ((m % 12) + 12) % 12;
+                if (prevPCSet.has(pc)) {
+                    commonMidi.push(m);
+                    const matchName = (currChordPCs || []).find(pcStr => getMidiIdx(pcStr) === pc) || chromaticScale[pc];
+                    if (!commonNames.includes(matchName)) commonNames.push(matchName);
+                }
+            });
+
+            return { commonMidi, commonNames };
         }
 
         function getNotesForChord(rootStr, type, baseOctave = 3) {
@@ -984,9 +1176,9 @@
             return Tone.Frequency(midiNote, "midi").toNote();
         }
 
-        function highlightPianoKeys(bassMidi, upperMidiVoices, chordPCs = null) {
-            document.querySelectorAll('.key-active-bass, .key-active-voice').forEach(el => {
-                el.classList.remove('key-active-bass', 'key-active-voice');
+        function highlightPianoKeys(bassMidi, upperMidiVoices, chordPCs = null, commonMidiNotes = []) {
+            document.querySelectorAll('.key-active-bass, .key-active-voice, .key-common-tone').forEach(el => {
+                el.classList.remove('key-active-bass', 'key-active-voice', 'key-common-tone');
             });
 
             if (bassMidi !== null) {
@@ -996,14 +1188,30 @@
                 if (bassLabel) bassLabel.textContent = formatMidiWithChordSpelling(bassMidi, chordPCs);
             }
 
+            const commonSet = new Set(commonMidiNotes || []);
+
             if (upperMidiVoices && upperMidiVoices.length > 0) {
                 upperMidiVoices.forEach(m => {
                     const vEl = document.getElementById(`piano-key-${m}`);
-                    if (vEl) vEl.classList.add('key-active-voice');
+                    if (vEl) {
+                        vEl.classList.add('key-active-voice');
+                        if (commonSet.has(m)) {
+                            vEl.classList.add('key-common-tone');
+                        }
+                    }
                 });
                 const voicesLabel = document.getElementById('activeVoicesLabel');
                 if (voicesLabel) {
                     voicesLabel.textContent = upperMidiVoices.map(m => formatMidiWithChordSpelling(m, chordPCs)).join(' - ');
+                }
+            }
+
+            const commonLabel = document.getElementById('activeCommonLabel');
+            if (commonLabel) {
+                if (commonMidiNotes && commonMidiNotes.length > 0) {
+                    commonLabel.textContent = commonMidiNotes.map(m => formatMidiWithChordSpelling(m, chordPCs)).join(', ');
+                } else {
+                    commonLabel.textContent = 'Ninguna';
                 }
             }
         }
@@ -1070,6 +1278,30 @@
                 }
             });
             renderDiagram();
+        };
+
+        window.setHarmonicColorMode = function(enableExtensions) {
+            harmonicExtensionsEnabled = enableExtensions;
+            const btnStd = document.getElementById('harm_std');
+            const btnExt = document.getElementById('harm_ext');
+            const badge = document.getElementById('tensionBadgeInfo');
+
+            if (!enableExtensions) {
+                btnStd.className = 'py-1 rounded-lg text-[10px] font-black transition bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm';
+                btnExt.className = 'py-1 rounded-lg text-[10px] font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900';
+                if (badge) badge.classList.add('hidden');
+            } else {
+                btnExt.className = 'py-1 rounded-lg text-[10px] font-black transition bg-amber-500 text-white shadow-sm';
+                btnStd.className = 'py-1 rounded-lg text-[10px] font-bold transition text-slate-600 dark:text-slate-400 hover:text-slate-900';
+                if (badge) badge.classList.remove('hidden');
+            }
+
+            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            if (currentProgression.length > 0) {
+                playSingleTimelineChord(currentProgression.length - 1);
+            } else {
+                showToast(enableExtensions ? 'Modo Tensiones (9 / b9 / 13) activado' : 'Modo Cuatríadas estándar activado');
+            }
         };
 
         window.toggleAllGroup = function(group, state) {
@@ -1422,9 +1654,9 @@
             }
         }
 
-        function playChordDirect(notes, bassMidi = null, upperMidiVoices = null, chordPCs = null) {
+        function playChordDirect(notes, bassMidi = null, upperMidiVoices = null, chordPCs = null, commonMidiNotes = []) {
             if (bassMidi !== null && upperMidiVoices !== null) {
-                highlightPianoKeys(bassMidi, upperMidiVoices, chordPCs);
+                highlightPianoKeys(bassMidi, upperMidiVoices, chordPCs, commonMidiNotes);
             }
             if(!isAudioInitialized || !synth) return;
             let style = document.getElementById('playbackStyleSelect').value;
@@ -1506,33 +1738,45 @@
                 const updatedNode = globalNodes[oldItem.nodeId] || window.nodeDataMap[oldItem.nodeId];
                 if (!updatedNode) return;
 
-                let pcs = getSpelledChordPCs(updatedNode.name, updatedNode.type);
+                let basePcs = getSpelledChordPCs(updatedNode.name, updatedNode.type);
+                let voicingInfo = getVoicingPCsForNode(updatedNode);
                 let upperMidiVoices = [];
-                let slashName = updatedNode.name + (updatedNode.type || '');
-                let bassMidi = 36 + getMidiIdx(pcs[0]);
+                let slashName = updatedNode.name + voicingInfo.extLabel;
+                let bassMidi = 36 + getMidiIdx(basePcs[0]);
                 let chosenBassStep = oldItem.chosenBassStep;
+                let voiceRotation = oldItem.voiceRotation || 0;
 
                 if (idx === 0) {
-                    upperMidiVoices = generateInitialVoicing(pcs);
-                    if (insertionMode === 'interactive_vl' && chosenBassStep !== undefined && pcs[chosenBassStep]) {
-                        const bassPc = pcs[chosenBassStep];
+                    upperMidiVoices = generateInitialVoicing(voicingInfo.upperPCs);
+                    if (voiceRotation !== 0) {
+                        const steps = Math.abs(voiceRotation);
+                        const dir = voiceRotation > 0 ? 1 : -1;
+                        for (let s = 0; s < steps; s++) upperMidiVoices = rotateUpperVoicing(upperMidiVoices, dir);
+                    }
+                    if (insertionMode === 'interactive_vl' && chosenBassStep !== undefined && basePcs[chosenBassStep]) {
+                        const bassPc = basePcs[chosenBassStep];
                         bassMidi = 36 + getMidiIdx(bassPc);
                         if (chosenBassStep !== 0) slashName = `${slashName}/${bassPc}`;
                     } else {
-                        const bObj = computeSmartBass(pcs, null, true);
+                        const bObj = computeSmartBass(basePcs, null, true);
                         bassMidi = bObj.bassMidi;
                         chosenBassStep = 0;
                     }
                 } else {
                     let prevChord = newProg[idx - 1];
-                    upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices);
+                    upperMidiVoices = calculateLinkedVoicing(voicingInfo.upperPCs, prevChord.upperMidiVoices);
+                    if (voiceRotation !== 0) {
+                        const steps = Math.abs(voiceRotation);
+                        const dir = voiceRotation > 0 ? 1 : -1;
+                        for (let s = 0; s < steps; s++) upperMidiVoices = rotateUpperVoicing(upperMidiVoices, dir);
+                    }
 
                     if (insertionMode === 'root') {
-                        const bObj = computeSmartBass(pcs, prevChord.bassMidi, true);
+                        const bObj = computeSmartBass(basePcs, prevChord.bassMidi, true);
                         bassMidi = bObj.bassMidi;
                         chosenBassStep = 0;
-                    } else if (insertionMode === 'interactive_vl' && chosenBassStep !== undefined && pcs[chosenBassStep]) {
-                        const bassPc = pcs[chosenBassStep];
+                    } else if (insertionMode === 'interactive_vl' && chosenBassStep !== undefined && basePcs[chosenBassStep]) {
+                        const bassPc = basePcs[chosenBassStep];
                         let candMidi = 36 + getMidiIdx(bassPc);
                         if (Math.abs((candMidi + 12) - prevChord.bassMidi) < Math.abs(candMidi - prevChord.bassMidi) && (candMidi + 12) <= 55) {
                             candMidi += 12;
@@ -1540,12 +1784,15 @@
                         bassMidi = candMidi;
                         if (chosenBassStep !== 0) slashName = `${slashName}/${bassPc}`;
                     } else {
-                        const bObj = computeSmartBass(pcs, prevChord.bassMidi, false);
+                        const bObj = computeSmartBass(basePcs, prevChord.bassMidi, false);
                         bassMidi = bObj.bassMidi;
-                        chosenBassStep = pcs.indexOf(bObj.bassPcName);
-                        if (bObj.bassPcName !== pcs[0]) slashName = `${slashName}/${bObj.bassPcName}`;
+                        chosenBassStep = basePcs.indexOf(bObj.bassPcName);
+                        if (bObj.bassPcName !== basePcs[0]) slashName = `${slashName}/${bObj.bassPcName}`;
                     }
                 }
+
+                let prevVoices = idx > 0 ? newProg[idx - 1].upperMidiVoices : null;
+                let commonInfo = getCommonTonesBetween(prevVoices, upperMidiVoices, voicingInfo.fullPCs);
 
                 newProg.push({
                     nodeId: updatedNode.id,
@@ -1553,8 +1800,11 @@
                     color: updatedNode.color,
                     bassMidi,
                     chosenBassStep,
+                    voiceRotation,
                     upperMidiVoices,
-                    chordPCs: pcs,
+                    chordPCs: voicingInfo.fullPCs,
+                    commonMidi: commonInfo.commonMidi,
+                    commonNames: commonInfo.commonNames,
                     originalNotes: updatedNode.notes,
                     originalDeg: updatedNode.deg
                 });
@@ -1563,6 +1813,17 @@
             currentProgression = newProg;
             renderTimelineUI();
         }
+
+        // Permite rotar manualmente la posición melódica (soprano) de un acorde en la línea de tiempo y recalcular el enlace en cascada
+        window.rotateChordVoicingInTimeline = function(index, direction) {
+            if (!currentProgression[index]) return;
+            currentProgression[index].voiceRotation = (currentProgression[index].voiceRotation || 0) + direction;
+            for (let j = index + 1; j < currentProgression.length; j++) {
+                currentProgression[j].voiceRotation = 0;
+            }
+            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            playSingleTimelineChord(index);
+        };
 
         window.handleNodeMouseEnter = function(nodeId) {
             if (!focusModeEnabled || currentCategory !== 'global' || isDraggingNode) return;
@@ -1906,167 +2167,118 @@
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 const dx = p2.x - p1.x;
                 const dy = p2.y - p1.y;
-                const midX = (p1.x + p2.x) / 2 - (dy * 0.14);
-                const midY = (p1.y + p2.y) / 2 + (dx * 0.14);
-                let d = `M ${p1.x},${p1.y} Q ${midX},${midY} ${p2.x},${p2.y}`;
-
+                const cx = (p1.x + p2.x) / 2 - dy * 0.12;
+                const cy = (p1.y + p2.y) / 2 + dx * 0.12;
+                path.setAttribute('d', `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`);
+                path.setAttribute('fill', 'none');
                 path.setAttribute('data-from', id1);
                 path.setAttribute('data-to', id2);
 
                 if (type === 'dashed') {
                     path.setAttribute('stroke', dashedColor);
-                    path.setAttribute('stroke-width', '2.5');
-                    path.setAttribute('stroke-dasharray', '6,6');
+                    path.setAttribute('stroke-width', '2');
+                    path.setAttribute('stroke-dasharray', '5,5');
                     path.setAttribute('marker-end', 'url(#arrow-dashed)');
-                    path.setAttribute('class', 'connection-line');
+                    path.setAttribute('class', 'connection-line opacity-60');
                 } else {
-                    path.setAttribute('stroke', hexColors[colorName] || hexColors.red);
-                    path.setAttribute('stroke-width', '3.2');
-                    path.setAttribute('class', 'connection-line animated-line');
+                    const col = hexColors[colorName] || hexColors.red;
+                    path.setAttribute('stroke', col);
+                    path.setAttribute('stroke-width', '2.5');
                     path.setAttribute('marker-end', `url(#arrow-${colorName || 'red'})`);
+                    path.setAttribute('class', 'connection-line animated-line opacity-80');
                 }
-                path.setAttribute('d', d);
-                path.setAttribute('fill', 'none');
                 svg.appendChild(path);
             }
 
-            const varData = theoryData[currentCategory].variations.find(v => v.id === currentVariation);
+            const varData = theoryData.global?.variations[0];
             if (varData && varData.links) {
-                varData.links.forEach(l => { 
-                    if (currentCategory === 'global') {
-                        let n1 = varData.nodes[l.from];
-                        let n2 = varData.nodes[l.to];
-                        if (!isNodeVisible(n1) || !isNodeVisible(n2)) return;
-                    }
-                    if(l.type === 'dashed') connect(l.from, l.to, 'dashed');
-                    else connect(l.from, l.to, 'solid', l.color); 
+                varData.links.forEach(l => {
+                    connect(l.from, l.to, l.type || 'solid', l.color || 'red');
                 });
             }
         }
 
-        function applyZoom(newZoom) {
-            currentZoom = Math.max(0.15, Math.min(2.2, newZoom));
+        window.changeZoom = function(delta) {
+            currentZoom = Math.max(0.45, Math.min(1.6, currentZoom + delta));
             const wrapper = document.getElementById('zoomWrapper');
-            if(wrapper) {
+            if (wrapper) {
                 wrapper.style.transform = `scale(${currentZoom})`;
             }
-        }
-
-        window.changeZoom = function(delta) {
-            applyZoom(currentZoom + delta);
         };
 
         window.centerMapCamera = function() {
             const scrollArea = document.getElementById('scrollArea');
             const wrapper = document.getElementById('zoomWrapper');
-            if(!scrollArea || !wrapper) return;
-            
-            const vw = scrollArea.clientWidth;
-            const vh = scrollArea.clientHeight;
-            let idealZoom = Math.min(vw / 1950, vh / 1260) * 1.02;
-            idealZoom = Math.max(0.25, Math.min(0.85, idealZoom));
-            applyZoom(idealZoom);
-
-            setTimeout(() => {
-                scrollArea.scrollLeft = Math.max(0, (1950 * currentZoom - vw) / 2);
-                scrollArea.scrollTop = Math.max(0, (1260 * currentZoom - vh) / 2);
-            }, 60);
+            if (!scrollArea || !wrapper) return;
+            wrapper.style.transform = `scale(${currentZoom})`;
+            const targetX = (1950 * currentZoom - scrollArea.clientWidth) / 2;
+            const targetY = Math.max(0, (1260 * currentZoom - scrollArea.clientHeight) * 0.35);
+            scrollArea.scrollTo({ left: Math.max(0, targetX), top: targetY, behavior: 'smooth' });
         };
 
         window.toggleFullscreenAndReset = function() {
             centerMapCamera();
-            try {
-                if (!document.fullscreenElement) {
-                    const req = document.documentElement.requestFullscreen();
-                    if (req && req.catch) req.catch(() => {});
-                } else if (document.exitFullscreen) {
-                    document.exitFullscreen().catch(() => {});
-                }
-            } catch (e) {}
-        };
-
-        document.addEventListener('fullscreenchange', () => {
-            const icon = document.getElementById('fullscreenIcon');
-            if (icon) {
-                icon.className = document.fullscreenElement ? 'fa-solid fa-compress text-xs' : 'fa-solid fa-expand text-xs';
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
             }
-        });
+        };
 
         function initCameraGestures() {
             const scrollArea = document.getElementById('scrollArea');
-            if(!scrollArea) return;
-
+            if (!scrollArea) return;
             scrollArea.addEventListener('wheel', (e) => {
                 if (e.ctrlKey || e.metaKey) {
                     e.preventDefault();
-                    const delta = e.deltaY < 0 ? 0.08 : -0.08;
-                    applyZoom(currentZoom + delta);
+                    changeZoom(e.deltaY < 0 ? 0.08 : -0.08);
                 }
             }, { passive: false });
-
-            let initialPinchDist = null;
-            let startZoom = 1;
-
-            scrollArea.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 2) {
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    initialPinchDist = Math.hypot(dx, dy);
-                    startZoom = currentZoom;
-                }
-            }, { passive: true });
-
-            scrollArea.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 2 && initialPinchDist) {
-                    if(e.cancelable) e.preventDefault();
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    const dist = Math.hypot(dx, dy);
-                    const scaleFactor = dist / initialPinchDist;
-                    applyZoom(startZoom * scaleFactor);
-                }
-            }, { passive: false });
-
-            scrollArea.addEventListener('touchend', () => {
-                initialPinchDist = null;
-            });
         }
-
-        window.openHelpModal = function() { document.getElementById('helpModal').classList.remove('hidden'); };
-        window.closeHelpModal = function() { document.getElementById('helpModal').classList.add('hidden'); };
-        window.closeInteractiveVLModal = function() { document.getElementById('interactiveVLModal').classList.add('hidden'); };
 
         function showToast(msg) {
             const toast = document.getElementById('toastNotification');
             const text = document.getElementById('toastText');
-            if(!toast || !text) return;
+            if (!toast || !text) return;
             text.textContent = msg;
-            toast.classList.remove('opacity-0');
+            toast.classList.remove('opacity-0', 'pointer-events-none');
             toast.classList.add('opacity-100');
             setTimeout(() => {
                 toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0');
-            }, 2200);
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2400);
         }
 
-        function showInteractiveVLModal(node, pcs) {
+        window.openHelpModal = function() {
+            document.getElementById('helpModal')?.classList.remove('hidden');
+        };
+
+        window.closeHelpModal = function() {
+            document.getElementById('helpModal')?.classList.add('hidden');
+        };
+
+        window.closeInteractiveVLModal = function() {
+            document.getElementById('interactiveVLModal')?.classList.add('hidden');
+        };
+
+        function showInteractiveVLModal(node, basePcs, voicingInfo) {
             const modal = document.getElementById('interactiveVLModal');
-            document.getElementById('ivl_chord_name').textContent = node.name + (node.type || '');
+            document.getElementById('ivl_chord_name').textContent = node.name + voicingInfo.extLabel;
             const optionsContainer = document.getElementById('ivl_options');
             optionsContainer.innerHTML = '';
 
             let prevChord = currentProgression.length > 0 ? currentProgression[currentProgression.length - 1] : null;
-            let upperMidiVoices = prevChord ? calculateLinkedVoicing(pcs, prevChord.upperMidiVoices) : generateInitialVoicing(pcs);
+            let upperMidiVoices = prevChord ? calculateLinkedVoicing(voicingInfo.upperPCs, prevChord.upperMidiVoices) : generateInitialVoicing(voicingInfo.upperPCs);
 
             const labels = ['Fundamental (Bajo en 1ra)', '1ra Inversión (Bajo en 3ra)', '2da Inversión (Bajo en 5ta)', '3ra Inversión (Bajo en 7ma)'];
 
-            pcs.forEach((pc, idx) => {
+            basePcs.forEach((pc, idx) => {
                 let pcIdx = getMidiIdx(pc);
                 let candMidi = 36 + pcIdx;
                 if (prevChord && Math.abs((candMidi + 12) - prevChord.bassMidi) < Math.abs(candMidi - prevChord.bassMidi) && (candMidi + 12) <= 55) {
                     candMidi += 12;
                 }
-                let slashName = idx === 0 ? `${node.name}${node.type || ''}` : `${node.name}${node.type || ''}/${pc}`;
+                let slashName = idx === 0 ? `${node.name}${voicingInfo.extLabel}` : `${node.name}${voicingInfo.extLabel}/${pc}`;
                 const btn = document.createElement('button');
                 btn.className = 'p-3 rounded-2xl border-2 border-slate-200 dark:border-slate-700 hover:border-indigo-500 bg-slate-50 dark:bg-slate-800/60 flex flex-col items-center justify-center transition';
                 btn.innerHTML = `
@@ -2075,7 +2287,7 @@
                 `;
                 btn.onclick = () => {
                     closeInteractiveVLModal();
-                    finalizeChordAddition(node, candMidi, upperMidiVoices, slashName, pcs, idx, true);
+                    finalizeChordAddition(node, candMidi, upperMidiVoices, slashName, voicingInfo.fullPCs, idx, true);
                 };
                 optionsContainer.appendChild(btn);
             });
@@ -2084,18 +2296,154 @@
         }
 
         function finalizeChordAddition(node, bassMidi, upperMidiVoices, slashName, chordPCs, chosenBassStep = 0, shouldPlay = true) {
+            let prevChord = currentProgression.length > 0 ? currentProgression[currentProgression.length - 1] : null;
+            let commonInfo = getCommonTonesBetween(prevChord ? prevChord.upperMidiVoices : null, upperMidiVoices, chordPCs);
+
             let allMidi = [bassMidi, ...upperMidiVoices];
             let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
 
             if (shouldPlay) {
                 if (!isAudioInitialized) {
-                    toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes, bassMidi, upperMidiVoices, chordPCs); });
+                    toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes, bassMidi, upperMidiVoices, chordPCs, commonInfo.commonMidi); });
                 } else {
-                    playChordDirect(playNotes, bassMidi, upperMidiVoices, chordPCs);
+                    playChordDirect(playNotes, bassMidi, upperMidiVoices, chordPCs, commonInfo.commonMidi);
                 }
             }
 
-            pushToProgression(node, bassMidi, upperMidiVoices, slashName, chordPCs, chosenBassStep);
+            pushToProgression(node, bassMidi, upperMidiVoices, slashName, chordPCs, chosenBassStep, commonInfo);
+        }
+
+        // ==================== MODO ENTRENAMIENTO AUDITIVO (EAR TRAINING QUIZ) ====================
+        window.toggleEarQuizMode = async function() {
+            earQuizActive = !earQuizActive;
+            const panel = document.getElementById('earQuizPanel');
+            const headerBtn = document.getElementById('earQuizHeaderBtn');
+
+            if (earQuizActive) {
+                panel.classList.remove('hidden');
+                headerBtn.className = 'px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-500 text-white border border-amber-600 shadow-md transition';
+                if (!isAudioInitialized) await toggleMasterAudio();
+                startNewQuizRound();
+            } else {
+                panel.classList.add('hidden');
+                headerBtn.className = 'px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition shadow-sm';
+                document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node').forEach(el => {
+                    el.classList.remove('quiz-correct-node', 'quiz-wrong-node');
+                });
+                quizTargetNode = null;
+            }
+        };
+
+        function getVisibleCandidateNodesForQuiz() {
+            const globalNodes = theoryData.global?.variations[0]?.nodes || {};
+            return Object.values(globalNodes).filter(n => isNodeVisible(n));
+        }
+
+        function playNodeForQuiz(node) {
+            if (!node) return;
+            const basePcs = getSpelledChordPCs(node.name, node.type);
+            const voicingInfo = getVoicingPCsForNode(node);
+            const upperMidi = generateInitialVoicing(voicingInfo.upperPCs);
+            const bassMidi = 36 + getMidiIdx(basePcs[0]);
+            const allNotes = [bassMidi, ...upperMidi].map(m => Tone.Frequency(m, "midi").toNote());
+            // En modo Quiz no iluminamos el teclado para no revelar visualmente la respuesta antes de adivinar
+            if (isAudioInitialized && synth) {
+                const now = Tone.now();
+                synth.releaseAll();
+                allNotes.forEach((n, i) => synth.triggerAttackRelease(n, '2n', now + i * 0.03));
+            }
+        }
+
+        window.playQuizTonicReference = async function() {
+            if (!isAudioInitialized) await toggleMasterAudio();
+            const tonicNode = theoryData.global?.variations[0]?.nodes['Imaj7'];
+            if (tonicNode) {
+                playNodeForQuiz(tonicNode);
+                const statusEl = document.getElementById('quizStatusText');
+                if (statusEl) statusEl.textContent = `Referencia Tónica: ${tonicNode.name}maj7 (Imaj7). Ahora escucha el acorde misterioso.`;
+            }
+        };
+
+        window.replayQuizMysteryChord = async function() {
+            if (!isAudioInitialized) await toggleMasterAudio();
+            if (!quizTargetNode) {
+                startNewQuizRound();
+                return;
+            }
+            playNodeForQuiz(quizTargetNode);
+        };
+
+        window.startNewQuizRound = async function() {
+            if (!isAudioInitialized) await toggleMasterAudio();
+            document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node').forEach(el => {
+                el.classList.remove('quiz-correct-node', 'quiz-wrong-node');
+            });
+
+            const candidates = getVisibleCandidateNodesForQuiz();
+            if (candidates.length === 0) return;
+
+            let pool = candidates.length > 1 && quizTargetNode
+                ? candidates.filter(n => n.id !== quizTargetNode.id)
+                : candidates;
+
+            quizTargetNode = pool[Math.floor(Math.random() * pool.length)];
+            quizRoundSolved = false;
+
+            const statusEl = document.getElementById('quizStatusText');
+            if (statusEl) {
+                statusEl.innerHTML = `<span class="text-indigo-600 dark:text-indigo-400">🔊 Sonando Tónica (I) ➔ Acorde Misterioso...</span> ¡Haz clic en el círculo del mapa que creas que sonó!`;
+            }
+
+            const tonicNode = theoryData.global?.variations[0]?.nodes['Imaj7'];
+            if (tonicNode) playNodeForQuiz(tonicNode);
+            setTimeout(() => {
+                if (earQuizActive && quizTargetNode) {
+                    playNodeForQuiz(quizTargetNode);
+                }
+            }, 950);
+        };
+
+        function handleEarQuizGuess(clickedNode) {
+            if (!quizTargetNode) return;
+            const el = document.getElementById(`node-${clickedNode.id}`);
+            const statusEl = document.getElementById('quizStatusText');
+
+            // Reproducir el acorde que el usuario tocó para que compare auditivamente
+            playNodeForQuiz(clickedNode);
+
+            if (clickedNode.id === quizTargetNode.id) {
+                if (el) {
+                    el.classList.remove('quiz-wrong-node');
+                    el.classList.add('quiz-correct-node');
+                }
+                if (!quizRoundSolved) {
+                    quizStreak++;
+                    quizCorrectCount++;
+                    quizTotalAttempts++;
+                    quizRoundSolved = true;
+                }
+                const basePcs = getSpelledChordPCs(clickedNode.name, clickedNode.type);
+                const voicingInfo = getVoicingPCsForNode(clickedNode);
+                const upperMidi = generateInitialVoicing(voicingInfo.upperPCs);
+                highlightPianoKeys(36 + getMidiIdx(basePcs[0]), upperMidi, voicingInfo.fullPCs, []);
+
+                if (statusEl) {
+                    statusEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-black">¡Correcto! 🎉 Era ${clickedNode.name}${clickedNode.type} (${clickedNode.deg}).</span> Presiona "Siguiente Reto" para continuar.`;
+                }
+                showToast(`¡Correcto! ${clickedNode.name}${clickedNode.type} (${clickedNode.deg})`);
+            } else {
+                if (el) el.classList.add('quiz-wrong-node');
+                if (!quizRoundSolved) {
+                    quizStreak = 0;
+                    quizTotalAttempts++;
+                }
+                if (statusEl) {
+                    statusEl.innerHTML = `<span class="text-red-600 dark:text-red-400 font-black">Casi... Tocaste ${clickedNode.name}${clickedNode.type} (${clickedNode.deg}).</span> Vuelve a oír el acorde misterioso e intenta de nuevo.`;
+                }
+            }
+
+            document.getElementById('quizStreakVal').textContent = quizStreak;
+            document.getElementById('quizScoreVal').textContent = `${quizCorrectCount}/${quizTotalAttempts}`;
         }
 
         window.addNodeToTimeline = function(nodeId, fallbackName, fallbackColor, fallbackNotesStr, silent = false) {
@@ -2111,43 +2459,50 @@
             };
             if(!node) return;
 
-            let pcs = getSpelledChordPCs(node.name, node.type);
+            // Si el Modo Quiz Auditivo está activo y el clic no viene de un preset silencioso, evaluamos la respuesta
+            if (!silent && earQuizActive) {
+                handleEarQuizGuess(node);
+                return;
+            }
+
+            let basePcs = getSpelledChordPCs(node.name, node.type);
+            let voicingInfo = getVoicingPCsForNode(node);
             let insertionMode = document.getElementById('insertionModeSelect').value;
             
             if (!silent && insertionMode === 'interactive_vl') {
-                showInteractiveVLModal(node, pcs);
+                showInteractiveVLModal(node, basePcs, voicingInfo);
                 return;
             } 
 
-            let bassMidi = 36 + getMidiIdx(pcs[0]);
+            let bassMidi = 36 + getMidiIdx(basePcs[0]);
             let chosenBassStep = 0;
             let upperMidiVoices = [];
-            let slashName = node.name + (node.type || '');
+            let slashName = node.name + voicingInfo.extLabel;
 
             if (currentProgression.length === 0) {
-                upperMidiVoices = generateInitialVoicing(pcs);
-                const bObj = computeSmartBass(pcs, null, true);
+                upperMidiVoices = generateInitialVoicing(voicingInfo.upperPCs);
+                const bObj = computeSmartBass(basePcs, null, true);
                 bassMidi = bObj.bassMidi;
                 chosenBassStep = 0;
             } else {
                 let prevChord = currentProgression[currentProgression.length - 1];
-                upperMidiVoices = calculateLinkedVoicing(pcs, prevChord.upperMidiVoices);
+                upperMidiVoices = calculateLinkedVoicing(voicingInfo.upperPCs, prevChord.upperMidiVoices);
                 
                 if (insertionMode === 'root') {
-                    const bObj = computeSmartBass(pcs, prevChord.bassMidi, true);
+                    const bObj = computeSmartBass(basePcs, prevChord.bassMidi, true);
                     bassMidi = bObj.bassMidi;
                     chosenBassStep = 0;
                 } else {
-                    const bObj = computeSmartBass(pcs, prevChord.bassMidi, false);
+                    const bObj = computeSmartBass(basePcs, prevChord.bassMidi, false);
                     bassMidi = bObj.bassMidi;
-                    chosenBassStep = Math.max(0, pcs.indexOf(bObj.bassPcName));
-                    if (bObj.bassPcName !== pcs[0]) {
+                    chosenBassStep = Math.max(0, basePcs.indexOf(bObj.bassPcName));
+                    if (bObj.bassPcName !== basePcs[0]) {
                         slashName = `${slashName}/${bObj.bassPcName}`;
                     }
                 }
             }
 
-            finalizeChordAddition(node, bassMidi, upperMidiVoices, slashName, pcs, chosenBassStep, !silent);
+            finalizeChordAddition(node, bassMidi, upperMidiVoices, slashName, voicingInfo.fullPCs, chosenBassStep, !silent);
         };
 
         window.loadPresetProgression = function(presetKey) {
@@ -2228,15 +2583,46 @@
             }
             container.innerHTML = '';
             currentProgression.forEach((chord, i) => {
+                // Conector visual de Notas Comunes entre acordes
+                if (i > 0) {
+                    const hasCommon = chord.commonNames && chord.commonNames.length > 0;
+                    const badgeTitle = hasCommon
+                        ? `Notas comunes mantenidas fijas: ${chord.commonNames.join(', ')}`
+                        : `Sin notas comunes: enlace por 1ra voz más cercana`;
+                    const badgeContent = hasCommon
+                        ? `<i class="fa-solid fa-link text-[8px] text-amber-500"></i> <span>${chord.commonNames.join('·')}</span>`
+                        : `<i class="fa-solid fa-arrow-trend-down text-[8px] text-indigo-400"></i> <span>1ra Voz</span>`;
+                    const badgeStyle = hasCommon
+                        ? `bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700`
+                        : `bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700`;
+
+                    container.innerHTML += `
+                        <div class="flex-shrink-0 flex flex-col items-center justify-center -mx-1 z-20" title="${badgeTitle}">
+                            <div class="px-1.5 py-0.5 rounded-full border text-[8px] font-black flex items-center gap-1 shadow-sm ${badgeStyle}">
+                                ${badgeContent}
+                            </div>
+                        </div>
+                    `;
+                }
+
                 let degHtml = chord.originalDeg ? `<div class="mt-0.5 text-[8px] px-1.5 py-0.5 rounded-full bg-white/70 dark:bg-black/30 text-${chord.color}-800 dark:text-${chord.color}-200 whitespace-nowrap"><span class="font-black">${chord.originalDeg}</span></div>` : '';
+                let topVoiceNote = chord.upperMidiVoices && chord.upperMidiVoices.length > 0
+                    ? formatMidiWithChordSpelling(chord.upperMidiVoices[chord.upperMidiVoices.length - 1], chord.chordPCs)
+                    : '';
+
                 container.innerHTML += `
-                    <div class="group relative flex-shrink-0 px-3.5 py-1 min-h-[58px] min-w-[92px] rounded-xl border-2 border-${chord.color}-400 bg-${chord.color}-50 dark:bg-${chord.color}-900/40 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-transform" id="timeline-chord-${i}" onclick="playSingleTimelineChord(${i})">
+                    <div class="group relative flex-shrink-0 px-3 py-1 min-h-[60px] min-w-[104px] rounded-xl border-2 border-${chord.color}-400 bg-${chord.color}-50 dark:bg-${chord.color}-900/40 flex flex-col items-center justify-center shadow-sm cursor-pointer transition-transform" id="timeline-chord-${i}" onclick="playSingleTimelineChord(${i})">
                         <span class="text-xs lg:text-sm font-black tracking-tight text-${chord.color}-700 dark:text-${chord.color}-200 whitespace-nowrap">${chord.name}</span>
-                        ${degHtml}
+                        <div class="flex items-center gap-1">
+                            ${degHtml}
+                            <span class="text-[8px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/70 px-1 rounded" title="1ra Voz (Soprano)">♪ ${topVoiceNote}</span>
+                        </div>
                         
-                        <div class="flex items-center gap-2 mt-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                            ${i > 0 ? `<button type="button" onclick="event.stopPropagation(); moveChordInTimeline(${i}, -1)" class="text-[9px] text-slate-500 hover:text-indigo-600 dark:text-slate-400"><i class="fa-solid fa-chevron-left"></i></button>` : ''}
-                            ${i < currentProgression.length - 1 ? `<button type="button" onclick="event.stopPropagation(); moveChordInTimeline(${i}, 1)" class="text-[9px] text-slate-500 hover:text-indigo-600 dark:text-slate-400"><i class="fa-solid fa-chevron-right"></i></button>` : ''}
+                        <div class="flex items-center gap-1.5 mt-0.5 opacity-75 group-hover:opacity-100 transition-opacity">
+                            ${i > 0 ? `<button type="button" title="Mover acorde a la izquierda" onclick="event.stopPropagation(); moveChordInTimeline(${i}, -1)" class="text-[9px] text-slate-500 hover:text-indigo-600 dark:text-slate-400"><i class="fa-solid fa-chevron-left"></i></button>` : ''}
+                            <button type="button" title="Bajar inversión de voces superiores (▼)" onclick="event.stopPropagation(); rotateChordVoicingInTimeline(${i}, -1)" class="px-1 rounded bg-white/70 dark:bg-slate-800 text-[8px] font-black text-slate-600 dark:text-slate-300 hover:text-indigo-600">▼</button>
+                            <button type="button" title="Subir inversión de voces superiores (▲)" onclick="event.stopPropagation(); rotateChordVoicingInTimeline(${i}, 1)" class="px-1 rounded bg-white/70 dark:bg-slate-800 text-[8px] font-black text-slate-600 dark:text-slate-300 hover:text-indigo-600">▲</button>
+                            ${i < currentProgression.length - 1 ? `<button type="button" title="Mover acorde a la derecha" onclick="event.stopPropagation(); moveChordInTimeline(${i}, 1)" class="text-[9px] text-slate-500 hover:text-indigo-600 dark:text-slate-400"><i class="fa-solid fa-chevron-right"></i></button>` : ''}
                         </div>
 
                         <button type="button" onclick="event.stopPropagation(); removeFromProgression(${i})" class="absolute -top-1.5 -right-1.5 bg-slate-800 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center shadow-md hover:bg-red-500 transition-colors z-50"><i class="fa-solid fa-times"></i></button>
@@ -2246,15 +2632,18 @@
             container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
         }
 
-        function pushToProgression(node, bassMidi, upperMidiVoices, slashName, chordPCs, chosenBassStep = 0) {
+        function pushToProgression(node, bassMidi, upperMidiVoices, slashName, chordPCs, chosenBassStep = 0, commonInfo = { commonMidi: [], commonNames: [] }) {
             currentProgression.push({
                 nodeId: node.id,
                 name: slashName,
                 color: node.color,
                 bassMidi,
                 chosenBassStep,
+                voiceRotation: 0,
                 upperMidiVoices,
                 chordPCs,
+                commonMidi: commonInfo.commonMidi || [],
+                commonNames: commonInfo.commonNames || [],
                 originalNotes: node.notes,
                 originalDeg: node.deg
             });
@@ -2267,9 +2656,9 @@
             let allMidi = [chord.bassMidi, ...chord.upperMidiVoices];
             let playNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
             if (!isAudioInitialized) {
-                toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes, chord.bassMidi, chord.upperMidiVoices, chord.chordPCs); });
+                toggleMasterAudio().then(() => { if(synth) playChordDirect(playNotes, chord.bassMidi, chord.upperMidiVoices, chord.chordPCs, chord.commonMidi || []); });
             } else {
-                playChordDirect(playNotes, chord.bassMidi, chord.upperMidiVoices, chord.chordPCs);
+                playChordDirect(playNotes, chord.bassMidi, chord.upperMidiVoices, chord.chordPCs, chord.commonMidi || []);
             }
         };
 
@@ -2313,6 +2702,8 @@
             highlightPianoKeys(null, []);
             document.getElementById('activeBassLabel').textContent = '-';
             document.getElementById('activeVoicesLabel').textContent = '-';
+            const commonLabel = document.getElementById('activeCommonLabel');
+            if (commonLabel) commonLabel.textContent = '-';
             renderTimelineUI();
         };
 
@@ -2341,7 +2732,7 @@
                     if (!isPlayingProgression) return;
                     let allMidi = [chord.bassMidi, ...chord.upperMidiVoices];
                     let allNotes = allMidi.map(m => Tone.Frequency(m, "midi").toNote());
-                    playChordDirect(allNotes, chord.bassMidi, chord.upperMidiVoices, chord.chordPCs);
+                    playChordDirect(allNotes, chord.bassMidi, chord.upperMidiVoices, chord.chordPCs, chord.commonMidi || []);
                     
                     const el = document.getElementById(`timeline-chord-${index}`);
                     if(el) {
