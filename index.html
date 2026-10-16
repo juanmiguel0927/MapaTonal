@@ -2,7 +2,7 @@
 <html lang="es" class="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Mapa Tonal — Haz visible la música</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -222,6 +222,18 @@
             border-color: #ef4444 !important;
             box-shadow: 0 0 60px rgba(239, 68, 68, 0.95) !important;
             z-index: 80 !important;
+        }
+        /* Modo Pantalla Completa Híbrido para Celulares e iFrames */
+        body.mobile-fullscreen-active {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            z-index: 99999 !important;
+            overflow: hidden !important;
+        }
+        body.mobile-fullscreen-active #appSidebar {
+            display: none !important;
         }
     </style>
 </head>
@@ -461,7 +473,7 @@
                 </div>
                 <div>
                     <h3 class="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5"><i class="fa-solid fa-link mr-1"></i> Modo de Bajo (Voces Siempre Enlazadas)</h3>
-                    <select id="insertionModeSelect" onchange="trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none">
+                    <select id="insertionModeSelect" onchange="transposeExistingProgression()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold text-slate-700 dark:text-slate-300 focus:outline-none">
                         <option value="auto_vl" selected>Bajo Enlazado Automático (Inversión Suave)</option>
                         <option value="interactive_vl">Bajo Interactivo (Elegir a cuál Inversión va)</option>
                         <option value="root">Bajo en Fundamental (Voces Enlazadas)</option>
@@ -472,17 +484,41 @@
 
         <section class="flex-grow flex flex-col relative bg-slate-100 dark:bg-[#0a0f1a] overflow-hidden min-h-[75vh] lg:min-h-0" id="mainSection">
             
-            <!-- Sub-encabezado del Mapa -->
-            <div class="flex-shrink-0 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md z-30 flex justify-between items-center shadow-sm">
-                <div>
-                    <span id="graphSubtitle" class="text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 block"></span>
-                    <h2 id="graphTitle" class="text-xs lg:text-sm font-black text-slate-800 dark:text-slate-100 leading-tight"></h2>
+            <!-- Sub-encabezado del Mapa con Controles de Cámara Integrados (No estorban en el lienzo) -->
+            <div class="flex-shrink-0 px-2.5 md:px-4 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-30 flex flex-wrap justify-between items-center gap-1.5 shadow-sm">
+                <div class="min-w-0">
+                    <span id="graphSubtitle" class="text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hidden sm:block truncate"></span>
+                    <h2 id="graphTitle" class="text-[11px] sm:text-xs lg:text-sm font-black text-slate-800 dark:text-slate-100 leading-tight truncate"></h2>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="resetNodePositions()" class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition" title="Restaurar posiciones originales">
-                        <i class="fa-solid fa-rotate-left mr-1"></i> Reset Posiciones
+                <div class="flex items-center gap-1 sm:gap-1.5 ml-auto">
+                    <!-- Píldora Compacta de Zoom y Cámara -->
+                    <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700">
+                        <button type="button" onclick="changeZoom(-0.15)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-md hover:bg-white dark:hover:bg-slate-700 active:scale-95 text-slate-700 dark:text-slate-200 flex items-center justify-center transition" title="Alejar Zoom (-)">
+                            <i class="fa-solid fa-minus text-[10px]"></i>
+                        </button>
+                        <button type="button" onclick="centerMapCamera()" id="zoomPercentBadge" class="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition leading-none min-w-[34px] text-center" title="Toca para centrar el mapa">
+                            85%
+                        </button>
+                        <button type="button" onclick="changeZoom(0.15)" class="w-6 h-6 sm:w-7 sm:h-7 rounded-md hover:bg-white dark:hover:bg-slate-700 active:scale-95 text-slate-700 dark:text-slate-200 flex items-center justify-center transition" title="Acercar Zoom (+)">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                        </button>
+                        <div class="h-3.5 border-l border-slate-300 dark:border-slate-600 mx-0.5"></div>
+                        <button type="button" onclick="centerMapCamera()" class="w-6 h-6 sm:w-7 sm:h-7 rounded-md hover:bg-emerald-500 hover:text-white active:scale-95 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition" title="Centrar Mapa en la Tónica">
+                            <i class="fa-solid fa-crosshairs text-[11px]"></i>
+                        </button>
+                    </div>
+
+                    <!-- Botón Reset Posiciones -->
+                    <button type="button" onclick="resetNodePositions()" class="px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg text-[10px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition flex items-center gap-1" title="Restaurar posiciones originales">
+                        <i class="fa-solid fa-rotate-left text-[10px]"></i> <span class="hidden md:inline">Reset Posiciones</span>
                     </button>
-                    <div id="functionBadge" class="px-2.5 py-1 rounded-full text-[9px] font-black border uppercase tracking-widest hidden sm:block shadow-sm"></div>
+
+                    <!-- Botón Pantalla Completa Compacto -->
+                    <button type="button" onclick="toggleFullscreenAndReset()" id="fullscreenBtn" class="w-7 h-7 sm:w-8 sm:h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-sm flex items-center justify-center transition" title="Pantalla Completa">
+                        <i id="fullscreenIcon" class="fa-solid fa-expand text-[11px]"></i>
+                    </button>
+
+                    <div id="functionBadge" class="px-2.5 py-1 rounded-full text-[9px] font-black border uppercase tracking-widest hidden xl:block shadow-sm"></div>
                 </div>
             </div>
 
@@ -518,43 +554,35 @@
                 </div>
             </div>
 
-            <!-- Área del Lienzo con Cámara / Zoom -->
-            <div class="flex-grow relative overflow-auto custom-scrollbar w-full h-full touch-pan-x touch-pan-y" id="scrollArea">
-                <div id="zoomWrapper" class="relative pointer-events-auto origin-top-left w-[1950px] h-[1260px] transition-transform duration-75 ease-out"> 
-                    
-                    <!-- FONDOS VECTORIALES -->
-                    <div id="zoneBackgrounds" class="absolute inset-0 z-0 pointer-events-none w-full h-full">
-                        <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" class="absolute inset-0">
-                            <polygon points="0,100 50,58 100,100" fill="#10b981" opacity="0.08"></polygon>
-                            <polygon points="0,0 50,0 50,58 0,100" fill="#3b82f6" opacity="0.06"></polygon>
-                            <polygon points="50,0 100,0 100,100 50,58" fill="#ef4444" opacity="0.06"></polygon>
+            <!-- Contenedor Relativo del Mapa (Aísla el lienzo y sus botones flotantes de la Línea de Tiempo) -->
+            <div class="flex-grow relative overflow-hidden w-full min-h-[370px] sm:min-h-[450px] lg:min-h-0" id="canvasViewport">
+                <!-- Área del Lienzo con Cámara / Zoom Multitáctil -->
+                <div class="w-full h-full overflow-auto custom-scrollbar touch-pan-x touch-pan-y" id="scrollArea">
+                    <div id="zoomSizer" class="relative overflow-hidden" style="width: 1950px; height: 1260px;">
+                        <div id="zoomWrapper" class="relative pointer-events-auto origin-top-left w-[1950px] h-[1260px]"> 
                             
-                            <polyline points="50,0 50,58" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
-                            <polyline points="50,58 0,100" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
-                            <polyline points="50,58 100,100" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
-                        </svg>
-                        
-                        <div class="zone-text text-blue-900 dark:text-blue-400 text-center" style="top: 2.5%; left: 26%; transform: translateX(-50%);">SUBDOMINANTE</div>
-                        <div class="zone-text text-red-900 dark:text-red-400 text-center" style="top: 2.5%; left: 74%; transform: translateX(-50%);">DOMINANTE</div>
-                        <div class="zone-text text-emerald-900 dark:text-emerald-400 text-center" style="bottom: 3%; left: 50%; transform: translateX(-50%);">TÓNICA</div>
+                            <!-- FONDOS VECTORIALES -->
+                            <div id="zoneBackgrounds" class="absolute inset-0 z-0 pointer-events-none w-full h-full">
+                                <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 100 100" class="absolute inset-0">
+                                    <polygon points="0,100 50,58 100,100" fill="#10b981" opacity="0.08"></polygon>
+                                    <polygon points="0,0 50,0 50,58 0,100" fill="#3b82f6" opacity="0.06"></polygon>
+                                    <polygon points="50,0 100,0 100,100 50,58" fill="#ef4444" opacity="0.06"></polygon>
+                                    
+                                    <polyline points="50,0 50,58" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
+                                    <polyline points="50,58 0,100" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
+                                    <polyline points="50,58 100,100" stroke="rgba(148,163,184,0.25)" stroke-width="0.25" stroke-dasharray="1,1" fill="none"></polyline>
+                                </svg>
+                                
+                                <div class="zone-text text-blue-900 dark:text-blue-400 text-center" style="top: 2.5%; left: 26%; transform: translateX(-50%);">SUBDOMINANTE</div>
+                                <div class="zone-text text-red-900 dark:text-red-400 text-center" style="top: 2.5%; left: 74%; transform: translateX(-50%);">DOMINANTE</div>
+                                <div class="zone-text text-emerald-900 dark:text-emerald-400 text-center" style="bottom: 3%; left: 50%; transform: translateX(-50%);">TÓNICA</div>
+                            </div>
+
+                            <svg id="svgLines" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+                            <div id="nodesContainer" class="absolute inset-0 w-full h-full z-10"></div>
+                        </div>
                     </div>
-
-                    <svg id="svgLines" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
-                    <div id="nodesContainer" class="absolute inset-0 w-full h-full z-10"></div>
                 </div>
-            </div>
-
-            <!-- Controles Flotantes de Zoom y Pantalla Completa -->
-            <div class="absolute bottom-[190px] right-4 z-40 flex flex-col gap-1.5">
-                <button onclick="changeZoom(0.15)" class="w-9 h-9 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition font-bold" title="Acercar Zoom">
-                    <i class="fa-solid fa-plus text-xs"></i>
-                </button>
-                <button onclick="changeZoom(-0.15)" class="w-9 h-9 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition font-bold" title="Alejar Zoom">
-                    <i class="fa-solid fa-minus text-xs"></i>
-                </button>
-                <button onclick="toggleFullscreenAndReset()" class="w-9 h-9 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center hover:bg-indigo-700 transition" title="Pantalla Completa / Centrar Mapa">
-                    <i id="fullscreenIcon" class="fa-solid fa-expand text-xs"></i>
-                </button>
             </div>
 
             <!-- Panel Inferior: Mini-Teclado + Línea de Tiempo -->
@@ -1296,7 +1324,7 @@
                 if (badge) badge.classList.remove('hidden');
             }
 
-            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            transposeExistingProgression();
             if (currentProgression.length > 0) {
                 playSingleTimelineChord(currentProgression.length - 1);
             } else {
@@ -1685,7 +1713,7 @@
             theoryData = buildTheoryData(currentKey);
             renderSidebar();
             renderDiagram();
-            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            transposeExistingProgression();
         }
 
         function computeSmartBass(pcs, prevBassMidi, forceRoot = false) {
@@ -1728,7 +1756,7 @@
             return { bassMidi: bestBassMidi, bassPcName: bestPcName };
         }
 
-        function trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63() {
+        function transposeExistingProgression() {
             if (currentProgression.length === 0) return;
             const insertionMode = document.getElementById('insertionModeSelect').value;
             const globalNodes = theoryData.global.variations[0].nodes;
@@ -1821,7 +1849,7 @@
             for (let j = index + 1; j < currentProgression.length; j++) {
                 currentProgression[j].voiceRotation = 0;
             }
-            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            transposeExistingProgression();
             playSingleTimelineChord(index);
         };
 
@@ -2198,42 +2226,201 @@
             }
         }
 
-        window.changeZoom = function(delta) {
-            currentZoom = Math.max(0.45, Math.min(1.6, currentZoom + delta));
+        const BASE_MAP_WIDTH = 1950;
+        const BASE_MAP_HEIGHT = 1260;
+        let isCustomFullscreen = false;
+
+        function applyZoomTransform(newZoom, focalClientX = null, focalClientY = null) {
+            const scrollArea = document.getElementById('scrollArea');
             const wrapper = document.getElementById('zoomWrapper');
+            const sizer = document.getElementById('zoomSizer');
+            const badge = document.getElementById('zoomPercentBadge');
+
+            const prevZoom = currentZoom;
+            currentZoom = Math.max(0.32, Math.min(1.65, newZoom));
+
+            let ratioX = 0.5;
+            let ratioY = 0.5;
+            if (scrollArea) {
+                const rect = scrollArea.getBoundingClientRect();
+                const viewX = (focalClientX !== null ? focalClientX - rect.left : scrollArea.clientWidth / 2);
+                const viewY = (focalClientY !== null ? focalClientY - rect.top : scrollArea.clientHeight / 2);
+                ratioX = (scrollArea.scrollLeft + viewX) / (BASE_MAP_WIDTH * prevZoom);
+                ratioY = (scrollArea.scrollTop + viewY) / (BASE_MAP_HEIGHT * prevZoom);
+            }
+
             if (wrapper) {
                 wrapper.style.transform = `scale(${currentZoom})`;
             }
+            if (sizer) {
+                sizer.style.width = `${Math.round(BASE_MAP_WIDTH * currentZoom)}px`;
+                sizer.style.height = `${Math.round(BASE_MAP_HEIGHT * currentZoom)}px`;
+            }
+            if (badge) {
+                badge.textContent = `${Math.round(currentZoom * 100)}%`;
+            }
+
+            if (scrollArea) {
+                const rect = scrollArea.getBoundingClientRect();
+                const viewX = (focalClientX !== null ? focalClientX - rect.left : scrollArea.clientWidth / 2);
+                const viewY = (focalClientY !== null ? focalClientY - rect.top : scrollArea.clientHeight / 2);
+                scrollArea.scrollLeft = Math.max(0, ratioX * (BASE_MAP_WIDTH * currentZoom) - viewX);
+                scrollArea.scrollTop = Math.max(0, ratioY * (BASE_MAP_HEIGHT * currentZoom) - viewY);
+            }
+        }
+
+        window.changeZoom = function(delta) {
+            applyZoomTransform(currentZoom + delta);
         };
 
-        window.centerMapCamera = function() {
+        window.centerMapCamera = function(smooth = true) {
             const scrollArea = document.getElementById('scrollArea');
             const wrapper = document.getElementById('zoomWrapper');
+            const sizer = document.getElementById('zoomSizer');
+            const badge = document.getElementById('zoomPercentBadge');
             if (!scrollArea || !wrapper) return;
+
             wrapper.style.transform = `scale(${currentZoom})`;
-            const targetX = (1950 * currentZoom - scrollArea.clientWidth) / 2;
-            const targetY = Math.max(0, (1260 * currentZoom - scrollArea.clientHeight) * 0.35);
-            scrollArea.scrollTo({ left: Math.max(0, targetX), top: targetY, behavior: 'smooth' });
+            if (sizer) {
+                sizer.style.width = `${Math.round(BASE_MAP_WIDTH * currentZoom)}px`;
+                sizer.style.height = `${Math.round(BASE_MAP_HEIGHT * currentZoom)}px`;
+            }
+            if (badge) {
+                badge.textContent = `${Math.round(currentZoom * 100)}%`;
+            }
+
+            // Centramos alrededor del núcleo ( ~48% en X y ~52% en Y )
+            const scaledW = BASE_MAP_WIDTH * currentZoom;
+            const scaledH = BASE_MAP_HEIGHT * currentZoom;
+            const targetX = Math.max(0, (scaledW * 0.48) - (scrollArea.clientWidth / 2));
+            const targetY = Math.max(0, (scaledH * 0.50) - (scrollArea.clientHeight / 2));
+
+            scrollArea.scrollTo({
+                left: targetX,
+                top: targetY,
+                behavior: smooth ? 'smooth' : 'auto'
+            });
         };
 
-        window.toggleFullscreenAndReset = function() {
-            centerMapCamera();
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+        function updateFullscreenButtonUI(active) {
+            const icon = document.getElementById('fullscreenIcon');
+            const btn = document.getElementById('fullscreenBtn');
+            if (icon) {
+                icon.className = active ? 'fa-solid fa-compress text-[11px]' : 'fa-solid fa-expand text-[11px]';
             }
+            if (btn) {
+                btn.className = active
+                    ? 'w-7 h-7 sm:w-8 sm:h-7 rounded-lg bg-amber-500 hover:bg-amber-600 active:scale-95 text-white shadow-sm flex items-center justify-center transition'
+                    : 'w-7 h-7 sm:w-8 sm:h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-sm flex items-center justify-center transition';
+            }
+        }
+
+        window.toggleFullscreenAndReset = function() {
+            const docEl = document.documentElement;
+            const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+            const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            const isNativeFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+            if (!isNativeFS && !isCustomFullscreen) {
+                isCustomFullscreen = true;
+                document.body.classList.add('mobile-fullscreen-active');
+                updateFullscreenButtonUI(true);
+
+                if (requestFS) {
+                    try {
+                        const p = requestFS.call(docEl);
+                        if (p && typeof p.catch === 'function') p.catch(() => {});
+                    } catch (e) {}
+                }
+                showToast('Modo Pantalla Completa activado');
+            } else {
+                isCustomFullscreen = false;
+                document.body.classList.remove('mobile-fullscreen-active');
+                updateFullscreenButtonUI(false);
+
+                if (isNativeFS && exitFS) {
+                    try {
+                        const p = exitFS.call(document);
+                        if (p && typeof p.catch === 'function') p.catch(() => {});
+                    } catch (e) {}
+                }
+                showToast('Saliste de Pantalla Completa');
+            }
+
+            setTimeout(() => {
+                drawLines();
+                centerMapCamera(true);
+            }, 140);
         };
+
+        document.addEventListener('fullscreenchange', () => {
+            const isNativeFS = !!document.fullscreenElement;
+            if (!isNativeFS && isCustomFullscreen) {
+                isCustomFullscreen = false;
+                document.body.classList.remove('mobile-fullscreen-active');
+                updateFullscreenButtonUI(false);
+            }
+        });
 
         function initCameraGestures() {
             const scrollArea = document.getElementById('scrollArea');
             if (!scrollArea) return;
+
+            // Zoom con rueda de ratón o trackpad en PC/Mac
             scrollArea.addEventListener('wheel', (e) => {
                 if (e.ctrlKey || e.metaKey) {
                     e.preventDefault();
-                    changeZoom(e.deltaY < 0 ? 0.08 : -0.08);
+                    const delta = e.deltaY < 0 ? 0.08 : -0.08;
+                    applyZoomTransform(currentZoom + delta, e.clientX, e.clientY);
                 }
             }, { passive: false });
+
+            // Zoom Multitáctil con 2 dedos (Pinch-to-Zoom) en Celulares y Tablets
+            let isPinching = false;
+            let initialPinchDistance = 0;
+            let initialPinchZoom = currentZoom;
+
+            function getTouchDistance(touches) {
+                const dx = touches[0].clientX - touches[1].clientX;
+                const dy = touches[0].clientY - touches[1].clientY;
+                return Math.hypot(dx, dy);
+            }
+
+            function getTouchMidpoint(touches) {
+                return {
+                    x: (touches[0].clientX + touches[1].clientX) / 2,
+                    y: (touches[0].clientY + touches[1].clientY) / 2
+                };
+            }
+
+            scrollArea.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    isPinching = true;
+                    isDraggingNode = false;
+                    initialPinchDistance = getTouchDistance(e.touches);
+                    initialPinchZoom = currentZoom;
+                }
+            }, { passive: true });
+
+            scrollArea.addEventListener('touchmove', (e) => {
+                if (isPinching && e.touches.length === 2) {
+                    if (e.cancelable) e.preventDefault();
+                    const currentDist = getTouchDistance(e.touches);
+                    if (initialPinchDistance > 15) {
+                        const scaleFactor = currentDist / initialPinchDistance;
+                        const mid = getTouchMidpoint(e.touches);
+                        applyZoomTransform(initialPinchZoom * scaleFactor, mid.x, mid.y);
+                    }
+                }
+            }, { passive: false });
+
+            const endPinch = (e) => {
+                if (!e.touches || e.touches.length < 2) {
+                    isPinching = false;
+                }
+            };
+            scrollArea.addEventListener('touchend', endPinch, { passive: true });
+            scrollArea.addEventListener('touchcancel', endPinch, { passive: true });
         }
 
         function showToast(msg) {
@@ -2553,7 +2740,7 @@
             const temp = currentProgression[index];
             currentProgression[index] = currentProgression[newIndex];
             currentProgression[newIndex] = temp;
-            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            transposeExistingProgression();
         };
 
         window.copyProgressionText = function() {
@@ -2664,7 +2851,7 @@
 
         window.removeFromProgression = function(index) {
             currentProgression.splice(index, 1);
-            trpZEAWYtiB6bJ16NuLbGCc6CZ6jJdKfb63();
+            transposeExistingProgression();
             renderTimelineUI();
         };
 
@@ -2771,8 +2958,19 @@
         window.onload = () => {
             initPianoKeyboard();
             initCameraGestures();
+            // En celulares iniciamos con un zoom panorámico (52%) y el menú lateral plegado para ver el mapa de inmediato
+            if (window.innerWidth < 768) {
+                currentZoom = 0.52;
+                const sidebar = document.getElementById('appSidebar');
+                if (sidebar && !isSidebarCollapsed) {
+                    isSidebarCollapsed = true;
+                    sidebar.classList.add('hidden');
+                }
+            } else {
+                currentZoom = 0.85;
+            }
             updateTone();
-            setTimeout(centerMapCamera, 120);
+            setTimeout(() => centerMapCamera(false), 120);
         };
     </script>
 </body>
