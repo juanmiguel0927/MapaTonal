@@ -30,7 +30,7 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -223,6 +223,12 @@
             box-shadow: 0 0 60px rgba(239, 68, 68, 0.95) !important;
             z-index: 80 !important;
         }
+        .quiz-revealed-node {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 65px rgba(245, 158, 11, 0.98) !important;
+            animation: quizPulse 0.7s ease-in-out 3;
+            z-index: 85 !important;
+        }
         /* Modo Pantalla Completa Híbrido para Celulares e iFrames */
         body.mobile-fullscreen-active {
             position: fixed !important;
@@ -263,14 +269,14 @@
 
             <div class="flex items-center gap-1.5 md:gap-2.5">
                 <!-- Botón Modo Entrenamiento Auditivo (Quiz) -->
-                <button id="earQuizHeaderBtn" onclick="toggleEarQuizMode()" class="px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition shadow-sm" title="Entrenamiento Auditivo: ¿Qué acorde sonó?">
+                <button id="earQuizHeaderBtn" onclick="toggleEarQuizMode()" class="px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition shadow-sm" title="Entrenamiento Auditivo Adaptativo">
                     <i class="fa-solid fa-ear-listen"></i> <span class="hidden sm:inline">Quiz Auditivo</span>
                 </button>
                 <!-- Toggle Modo Foco -->
                 <button id="focusModeBtn" onclick="toggleFocusMode()" class="px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/80 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition" title="Iluminar rutas al pasar el cursor">
                     <i class="fa-solid fa-bullseye"></i> <span class="hidden md:inline">Foco Ruta: ON</span>
                 </button>
-                <button onclick="openHelpModal()" class="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 transition" title="Guía del Mapa">
+                <button onclick="openHelpModal()" class="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 transition" title="Guía y Balance de Habilidades Auditivas">
                     <i class="fa-solid fa-circle-question"></i>
                 </button>
                 <button onclick="toggleTheme()" class="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition" title="Cambiar Tema">
@@ -484,7 +490,7 @@
 
         <section class="flex-grow flex flex-col relative bg-slate-100 dark:bg-[#0a0f1a] overflow-hidden min-h-[75vh] lg:min-h-0" id="mainSection">
             
-            <!-- Sub-encabezado del Mapa con Controles de Cámara Integrados (No estorban en el lienzo) -->
+            <!-- Sub-encabezado del Mapa con Controles de Cámara Integrados -->
             <div class="flex-shrink-0 px-2.5 md:px-4 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-30 flex flex-wrap justify-between items-center gap-1.5 shadow-sm">
                 <div class="min-w-0">
                     <span id="graphSubtitle" class="text-[8px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hidden sm:block truncate"></span>
@@ -522,39 +528,61 @@
                 </div>
             </div>
 
-            <!-- Barra Flotante de Entrenamiento Auditivo (Ear Training Quiz) -->
-            <div id="earQuizPanel" class="hidden bg-gradient-to-r from-amber-500/15 via-indigo-500/15 to-emerald-500/15 dark:from-amber-900/40 dark:via-indigo-900/40 dark:to-emerald-900/40 border-b border-amber-300/70 dark:border-amber-700/70 px-4 py-2 z-30 flex flex-wrap items-center justify-between gap-2 backdrop-blur-md shadow-sm">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-sm">
-                        <i class="fa-solid fa-ear-listen text-xs"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">Entrenamiento Auditivo</span>
-                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-amber-300/60">
-                                Racha: <strong id="quizStreakVal" class="text-emerald-600 dark:text-emerald-400">0</strong> 🔥 | Aciertos: <strong id="quizScoreVal" class="text-indigo-600 dark:text-indigo-400">0/0</strong>
+            <!-- Barra Flotante de Entrenamiento Auditivo Adaptativo (Ear Training Quiz) -->
+            <div id="earQuizPanel" class="hidden bg-gradient-to-r from-amber-500/15 via-indigo-500/15 to-emerald-500/15 dark:from-amber-950/70 dark:via-indigo-950/70 dark:to-emerald-950/70 border-b border-amber-300/80 dark:border-amber-700/80 px-3 md:px-4 py-2 z-30 flex flex-col gap-1.5 backdrop-blur-md shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-sm flex-shrink-0">
+                            <i class="fa-solid fa-ear-listen text-xs"></i>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <select id="quizLevelSelect" onchange="changeQuizLevel(this.value)" class="bg-white dark:bg-slate-800 border border-amber-400 dark:border-amber-600 rounded-lg px-2 py-1 text-[10px] font-black text-slate-800 dark:text-amber-300 focus:outline-none cursor-pointer shadow-sm" title="Ruta pedagógica: de lo más cercano (Tónica) a lo más lejano">
+                                <option value="1">Nivel 1: Grados Tonales (I, IV, V7)</option>
+                                <option value="2">Nivel 2: Diatónicos Completos (I al VII)</option>
+                                <option value="3">Nivel 3: Dominantes Secundarias (V7/X)</option>
+                                <option value="4">Nivel 4: Sustitutos Tritonales (subV7)</option>
+                                <option value="5">Nivel 5: Relación II-V y Sensibles (VIIº7)</option>
+                                <option value="6">Nivel 6: Intercambio Modal (Préstamo Menor)</option>
+                            </select>
+
+                            <button id="quizWeakFocusBtn" onclick="toggleQuizWeakFocusMode()" class="px-2 py-1 rounded-lg text-[9px] font-black border transition flex items-center gap-1 bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800" title="Priorizar acordes donde has fallado o pedido ayuda">
+                                <i class="fa-solid fa-crosshairs"></i> <span id="quizWeakFocusLabel">Atacar Debilidades: ON</span>
+                            </button>
+
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-white/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-amber-300/60">
+                                Racha: <strong id="quizStreakVal" class="text-emerald-600 dark:text-emerald-400">0</strong> 🔥 | Dominio Nivel: <strong id="quizLevelMasteryVal" class="text-indigo-600 dark:text-indigo-400">0%</strong>
                             </span>
                         </div>
-                        <p id="quizStatusText" class="text-[11px] font-bold text-slate-700 dark:text-slate-200">Escucha la referencia tónica y luego adivina qué acorde del mapa está sonando.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-1">
+                        <button onclick="playQuizTonicReference()" class="px-2 py-1 rounded-lg text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1" title="Escuchar el acorde Tónica (Imaj7) como centro gravitacional">
+                            <i class="fa-solid fa-compass"></i> <span class="hidden sm:inline">1. Tónica</span>
+                        </button>
+                        <button onclick="replayQuizMysteryChord()" class="px-2 py-1 rounded-lg text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1" title="Volver a escuchar el acorde misterioso">
+                            <i class="fa-solid fa-volume-high"></i> <span class="hidden sm:inline">2. Oír Reto</span>
+                        </button>
+                        <button onclick="revealQuizAnswer()" id="quizRevealBtn" class="px-2 py-1 rounded-lg text-[10px] font-black bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition flex items-center gap-1" title="Mostrar qué acorde es en el mapa y agendarlo para reforzarlo">
+                            <i class="fa-solid fa-eye"></i> <span>Respuesta</span>
+                        </button>
+                        <button onclick="startNewQuizRound()" class="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition flex items-center gap-1" title="Sortear siguiente acorde (priorizando tus debilidades)">
+                            <i class="fa-solid fa-forward-step"></i> <span>Siguiente</span>
+                        </button>
+                        <button onclick="openHelpModal('ear_balance')" class="px-2 py-1 rounded-lg text-[10px] font-black bg-slate-800 hover:bg-slate-700 text-amber-300 shadow-sm transition flex items-center gap-1" title="Ver Balance de Avance de Habilidades Auditivas">
+                            <i class="fa-solid fa-chart-line"></i> <span class="hidden md:inline">Balance</span>
+                        </button>
+                        <button onclick="toggleEarQuizMode()" class="w-6 h-6 rounded-lg bg-slate-200/80 dark:bg-slate-800 hover:bg-red-100 dark:hover:bg-red-950 text-slate-600 dark:text-slate-300 hover:text-red-600 flex items-center justify-center text-xs transition" title="Salir del modo Quiz">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="flex items-center gap-1.5">
-                    <button onclick="playQuizTonicReference()" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition flex items-center gap-1" title="Escuchar el acorde Tónica (Imaj7) para ubicar el oído">
-                        <i class="fa-solid fa-compass"></i> <span>1. Oír Tónica (I)</span>
-                    </button>
-                    <button onclick="replayQuizMysteryChord()" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1" title="Volver a escuchar el acorde misterioso">
-                        <i class="fa-solid fa-volume-high"></i> <span>2. Oír Misterioso</span>
-                    </button>
-                    <button onclick="startNewQuizRound()" class="px-2.5 py-1.5 rounded-xl text-[10px] font-black bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition flex items-center gap-1" title="Sortear otro acorde misterioso">
-                        <i class="fa-solid fa-forward-step"></i> <span>Siguiente Reto</span>
-                    </button>
-                    <button onclick="toggleEarQuizMode()" class="w-7 h-7 rounded-lg bg-slate-200/80 dark:bg-slate-800 hover:bg-red-100 dark:hover:bg-red-950 text-slate-600 dark:text-slate-300 hover:text-red-600 flex items-center justify-center text-xs transition" title="Salir del modo Quiz">
-                        <i class="fa-solid fa-times"></i>
-                    </button>
+                <div class="flex items-center justify-between gap-2 text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                    <p id="quizStatusText" class="truncate">Escucha la Tónica y luego identifica el acorde misterioso en el mapa.</p>
+                    <span id="quizWeakCounterBadge" class="text-[9px] font-black text-rose-600 dark:text-rose-400 whitespace-nowrap hidden"></span>
                 </div>
             </div>
 
-            <!-- Contenedor Relativo del Mapa (Aísla el lienzo y sus botones flotantes de la Línea de Tiempo) -->
+            <!-- Contenedor Relativo del Mapa -->
             <div class="flex-grow relative overflow-hidden w-full min-h-[370px] sm:min-h-[450px] lg:min-h-0" id="canvasViewport">
                 <!-- Área del Lienzo con Cámara / Zoom Multitáctil -->
                 <div class="w-full h-full overflow-auto custom-scrollbar touch-pan-x touch-pan-y" id="scrollArea">
@@ -639,7 +667,7 @@
                     </div>
                 </div>
 
-                <!-- Contenedor del Mini-Teclado Interactivo (Visor + Ejecución en Vivo) -->
+                <!-- Contenedor del Mini-Teclado Interactivo -->
                 <div id="pianoDrawer" class="w-full h-[58px] mb-1.5 bg-slate-900 p-1 rounded-xl shadow-inner relative overflow-hidden transition-all duration-200">
                     <div id="pianoKeysContainer" class="w-full h-full flex relative"></div>
                 </div>
@@ -664,20 +692,94 @@
         </div>
     </div>
 
-    <!-- Modal de Ayuda -->
-    <div id="helpModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[120] hidden flex justify-center items-center p-4">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 p-6 lg:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <!-- Modal de Ayuda + Balance de Avance de Habilidades Auditivas -->
+    <div id="helpModal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-[120] hidden flex justify-center items-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl border border-slate-200 dark:border-slate-700 p-5 lg:p-7 max-h-[92vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2"><i class="fa-solid fa-circle-question text-indigo-500"></i> Guía del Mapa Tonal Pro</h2>
-                <button onclick="closeHelpModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-100 hover:text-red-600 transition"><i class="fa-solid fa-times"></i></button>
+                <h2 class="text-lg lg:text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-indigo-500"></i> Centro de Aprendizaje y Balance Auditivo
+                </h2>
+                <button onclick="closeHelpModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-100 hover:text-red-600 transition">
+                    <i class="fa-solid fa-times"></i>
+                </button>
             </div>
-            <div class="space-y-3 text-xs lg:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                <p><strong>1. Enlace Armónico con Indicador de Notas Comunes y Rotación (▲/▼):</strong> Las voces superiores <strong>siempre se enlazan</strong>. Las notas comunes que se mantienen inmóviles entre dos acordes se resaltan con un <strong>borde dorado en el piano</strong> y con una etiqueta <code>🔗</code> entre las tarjetas de la Línea de Tiempo. Además, puedes usar las flechas <strong>▲ / ▼</strong> en cada acorde de la línea de tiempo para rotar la posición melódica de la voz superior y escuchar distintas disposiciones.</p>
-                <p><strong>2. Conmutador de Color Armónico (Tensiones 9 / b9 / 13):</strong> En el menú izquierdo puedes alternar entre <strong>Cuatríadas (7)</strong> y <strong>Tensiones (Jazz/Neo-Soul)</strong>. Al activar tensiones, el motor sustituye la fundamental duplicada en las voces superiores por la 9na (o <code>b9</code> en dominantes secundarios hacia acordes menores, como <code>A7(b9) ➔ Dm7</code>).</p>
-                <p><strong>3. Modo Entrenamiento Auditivo (Quiz):</strong> Actívalo en la barra superior para poner a prueba tu oído. Escucha la referencia Tónica (<code>Imaj7</code>), reproduce el acorde misterioso y haz clic en el círculo del mapa que creas que sonó.</p>
+
+            <!-- Pestañas dentro del Modal de Ayuda -->
+            <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-5">
+                <button id="helpTabBtn_balance" onclick="switchHelpTab('ear_balance')" class="py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-indigo-600 dark:text-amber-300 shadow-sm">
+                    <i class="fa-solid fa-chart-pie"></i> Balance de Habilidades Auditivas
+                </button>
+                <button id="helpTabBtn_guide" onclick="switchHelpTab('guide')" class="py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900">
+                    <i class="fa-solid fa-book-open"></i> Guía de Uso del Mapa
+                </button>
+            </div>
+
+            <!-- CONTENIDO PESTAÑA 1: BALANCE DE AVANCE DE HABILIDADES AUDITIVAS -->
+            <div id="helpTabContent_balance" class="space-y-4">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div class="p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-center">
+                        <span class="text-[9px] font-black uppercase tracking-wider text-indigo-500 block">Nivel Actual</span>
+                        <strong id="statCurrentLevel" class="text-base sm:text-lg font-black text-indigo-700 dark:text-indigo-300">Nivel 1</strong>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-center">
+                        <span class="text-[9px] font-black uppercase tracking-wider text-emerald-500 block">Precisión Global</span>
+                        <strong id="statGlobalAccuracy" class="text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-300">0%</strong>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center">
+                        <span class="text-[9px] font-black uppercase tracking-wider text-amber-500 block">Acordes Dominados</span>
+                        <strong id="statMasteredCount" class="text-base sm:text-lg font-black text-amber-700 dark:text-amber-300">0 / 50</strong>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-center">
+                        <span class="text-[9px] font-black uppercase tracking-wider text-rose-500 block">Puntos Débiles</span>
+                        <strong id="statWeakCount" class="text-base sm:text-lg font-black text-rose-700 dark:text-rose-300">0</strong>
+                    </div>
+                </div>
+
+                <!-- Progreso por Nivel Pedagógico (De lo más cercano a lo más lejano) -->
+                <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                            <i class="fa-solid fa-stairs text-indigo-500"></i> Ruta Auditiva (De lo más cercano a lo más lejano)
+                        </h3>
+                        <span class="text-[10px] font-bold text-slate-400">80% en el nivel desbloquea el siguiente</span>
+                    </div>
+                    <div id="earLevelsProgressContainer" class="space-y-2.5"></div>
+                </div>
+
+                <!-- Radar de Debilidades Específicas -->
+                <div class="bg-rose-50/60 dark:bg-rose-950/25 rounded-2xl p-4 border border-rose-200/80 dark:border-rose-800/50 space-y-2">
+                    <div class="flex flex-wrap justify-between items-center gap-2">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-heart-pulse"></i> Diagnóstico de Debilidades (Prioridad de Entrenamiento)
+                        </h3>
+                        <button onclick="startWeaknessDrillFromModal()" class="px-3 py-1 rounded-xl text-[10px] font-black bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition flex items-center gap-1">
+                            <i class="fa-solid fa-dumbbell"></i> Entrenar mis Debilidades Ahora
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-600 dark:text-slate-300">
+                        Cada vez que fallas un intento o presionas <strong>"Mostrar Respuesta"</strong>, el acorde incrementa su índice de debilidad. El entrenador adaptativo te preguntará estos acordes con una probabilidad hasta <strong>5 veces mayor</strong> hasta que aciertes 3 veces seguidas.
+                    </p>
+                    <div id="weakChordsListContainer" class="flex flex-wrap gap-1.5 pt-1"></div>
+                </div>
+
+                <div class="flex justify-between items-center pt-2">
+                    <button onclick="resetEarTrainingStats()" class="px-3 py-1.5 rounded-xl text-[10px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 transition flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i> Reiniciar Historial Auditivo
+                    </button>
+                    <button onclick="closeHelpModal()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black transition shadow-md text-xs">
+                        Cerrar y Volver al Mapa
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTENIDO PESTAÑA 2: GUÍA DE USO DEL MAPA -->
+            <div id="helpTabContent_guide" class="space-y-3 text-xs lg:text-sm text-slate-600 dark:text-slate-300 leading-relaxed hidden">
+                <p><strong>1. Entrenamiento Auditivo Adaptativo (De lo cercano a lo lejano):</strong> El oído aprende por gravedad tonal. Inicia en el <strong>Nivel 1 (Grados Tonales I, IV, V7)</strong>, luego expande a <strong>Diatónicos Completos</strong>, después <strong>Dominantes Secundarias</strong>, <strong>Sustitutos Tritonales (`subV7`)</strong>, <strong>Relaciones II-V / Sensibles (`VIIº7`)</strong> y finalmente <strong>Intercambio Modal</strong>. Si dudas en un acorde, usa el botón <strong>Respuesta</strong> para localizarlo en el mapa y el sistema lo programará como prioridad en tus próximas rondas.</p>
+                <p><strong>2. Enlace Armónico con Indicador de Notas Comunes y Rotación (▲/▼):</strong> Las voces superiores <strong>siempre se enlazan</strong>. Las notas comunes que se mantienen inmóviles entre dos acordes se resaltan con un <strong>borde dorado en el piano</strong> y con una etiqueta <code>🔗</code> entre las tarjetas de la Línea de Tiempo. Además, puedes usar las flechas <strong>▲ / ▼</strong> en cada acorde para rotar la posición melódica de la voz superior.</p>
+                <p><strong>3. Conmutador de Color Armónico (Tensiones 9 / b9 / 13):</strong> En el menú izquierdo puedes alternar entre <strong>Cuatríadas (7)</strong> y <strong>Tensiones (Jazz/Neo-Soul)</strong>. Al activar tensiones, el motor sustituye la fundamental duplicada en las voces superiores por la 9na (o <code>b9</code> en dominantes secundarios hacia acordes menores, como <code>A7(b9) ➔ Dm7</code>).</p>
                 <p><strong>4. Transposición Inteligente y Teclado en Vivo:</strong> Puedes tocar las teclas del piano directamente con el ratón o pantalla táctil, y al cambiar la tonalidad toda tu progresión se transportará respetando el enlace de voces.</p>
+                <button onclick="closeHelpModal()" class="mt-4 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black transition-colors shadow-md text-xs">¡Entendido!</button>
             </div>
-            <button onclick="closeHelpModal()" class="mt-6 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black transition-colors shadow-md text-xs">¡Entendido!</button>
         </div>
     </div>
 
@@ -709,14 +811,119 @@
         let isMouseDownOnPiano = false;
         let harmonicExtensionsEnabled = false;
 
-        // Estado del Modo Entrenamiento Auditivo (Quiz)
+        // ==================== CURRÍCULO AUDITIVO PROGRESIVO (DE LO MÁS CERCANO A LO MÁS LEJANO) ====================
+        const EAR_TRAINING_LEVELS = [
+            {
+                level: 1,
+                title: 'Nivel 1: Pilares Tonales (I, IV, V7)',
+                desc: 'Núcleo gravitacional primario: reposo (Tónica), alejamiento (Subdominante) y máxima tensión diatónica (Dominante).',
+                nodeIds: ['Imaj7', 'IVmaj7', 'V7'],
+                requiredFilters: { diatonic: true }
+            },
+            {
+                level: 2,
+                title: 'Nivel 2: Diatónicos Completos (I al VII)',
+                desc: 'Incorpora los relativos menores (IIm7, IIIm7, VIm7) y la sensible diatónica (VIIm7b5).',
+                nodeIds: ['Imaj7', 'IVmaj7', 'V7', 'IIm7', 'VIm7', 'IIIm7', 'VIIm7b5'],
+                requiredFilters: { diatonic: true }
+            },
+            {
+                level: 3,
+                title: 'Nivel 3: Dominantes Secundarias (V7/X)',
+                desc: 'Tensión cromática directa hacia los grados diatónicos II, III, IV, V y VI.',
+                nodeIds: ['V7_II', 'V7_III', 'V7_IV', 'V7_V', 'V7_VI'],
+                cumulativeIds: ['Imaj7', 'IVmaj7', 'V7', 'IIm7', 'VIm7', 'IIIm7', 'V7_II', 'V7_III', 'V7_IV', 'V7_V', 'V7_VI'],
+                requiredFilters: { diatonic: true, sec_II: true, sec_III: true, sec_IV: true, sec_V: true, sec_VI: true }
+            },
+            {
+                level: 4,
+                title: 'Nivel 4: Sustitutos Tritonales (subV7)',
+                desc: 'Resolución cromática descendente por semitono hacia la tónica y hacia los grados secundarios.',
+                nodeIds: ['SubV7', 'SubV_II', 'SubV_III', 'SubV_IV', 'SubV_V', 'SubV_VI'],
+                cumulativeIds: ['Imaj7', 'IIm7', 'IVmaj7', 'V7', 'VIm7', 'SubV7', 'SubV_II', 'SubV_III', 'SubV_IV', 'SubV_V', 'SubV_VI'],
+                requiredFilters: { diatonic: true, subV_main: true, sec_II: true, sec_III: true, sec_IV: true, sec_V: true, sec_VI: true, sat_subv: true }
+            },
+            {
+                level: 5,
+                title: 'Nivel 5: Relación II-V Secundaria y Sensibles (VIIº7)',
+                desc: 'Preparaciones secundarias (IIm7/X, subIIm7/X) y acordes disminuidos/semidisminuidos de reemplazo dominante.',
+                nodeIds: ['II_II', 'II_III', 'II_IV', 'II_V', 'II_VI', 'DimV_II', 'DimV_III', 'DimV_IV', 'DimV_V', 'DimV_VI', 'SubIIm7', 'SubII_II', 'SubII_IV', 'SubII_V'],
+                cumulativeIds: ['Imaj7', 'IIm7', 'IVmaj7', 'V7', 'V7_II', 'V7_IV', 'V7_V', 'V7_VI', 'II_II', 'II_III', 'II_IV', 'II_V', 'II_VI', 'DimV_II', 'DimV_III', 'DimV_IV', 'DimV_V', 'DimV_VI', 'SubIIm7', 'SubII_II', 'SubII_IV', 'SubII_V'],
+                requiredFilters: { diatonic: true, subV_main: true, sec_II: true, sec_III: true, sec_IV: true, sec_V: true, sec_VI: true, sat_ii: true, sat_subii: true, sat_dim: true }
+            },
+            {
+                level: 6,
+                title: 'Nivel 6: Intercambio Modal (Préstamo Menor)',
+                desc: 'Colores expresivos prestados de los modos paralelos: Tónica menor, Eólico, Frigio, Mixolidio y Locrio.',
+                nodeIds: ['Im7', 'bIIImaj7', 'IVm7', 'bVImaj7', 'bVII7', 'IIm7b5_modal', 'bIImaj7', 'bVIIm7', 'bVIImaj7', 'bVI7'],
+                cumulativeIds: ['Imaj7', 'IVmaj7', 'V7', 'Im7', 'bIIImaj7', 'IVm7', 'bVImaj7', 'bVII7', 'IIm7b5_modal', 'bIImaj7', 'bVIIm7', 'bVIImaj7', 'bVI7'],
+                requiredFilters: { diatonic: true, mod_tonic: true, mod_aeolian: true, mod_phrygian: true, mod_mixolydian: true, mod_locrian: true }
+            }
+        ];
+
+        // Estado del Modo Entrenamiento Auditivo Adaptativo (Quiz)
         let earQuizActive = false;
         let quizTargetNode = null;
         let quizStreak = 0;
-        let quizCorrectCount = 0;
-        let quizTotalAttempts = 0;
         let quizRoundSolved = false;
-        
+        let quizRoundHadMistakeOrReveal = false;
+        let quizWeakFocusEnabled = true;
+
+        // Estructura persistente de progreso auditivo en localStorage
+        let earStats = {
+            currentLevel: 1,
+            unlockedLevel: 1,
+            totalAttempts: 0,
+            totalCorrectFirstTry: 0,
+            chords: {} // nodeId -> { attempts, correct, wrong, revealed, streak, weakness }
+        };
+
+        function loadEarStats() {
+            try {
+                const raw = localStorage.getItem('mapaTonalEarStats_v2');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    earStats = {
+                        currentLevel: parsed.currentLevel || 1,
+                        unlockedLevel: parsed.unlockedLevel || 1,
+                        totalAttempts: parsed.totalAttempts || 0,
+                        totalCorrectFirstTry: parsed.totalCorrectFirstTry || 0,
+                        chords: parsed.chords || {}
+                    };
+                }
+            } catch (e) {}
+        }
+
+        function saveEarStats() {
+            try {
+                localStorage.setItem('mapaTonalEarStats_v2', JSON.stringify(earStats));
+            } catch (e) {}
+        }
+
+        function getChordStat(nodeId) {
+            if (!earStats.chords[nodeId]) {
+                earStats.chords[nodeId] = { attempts: 0, correct: 0, wrong: 0, revealed: 0, streak: 0, weakness: 0 };
+            }
+            return earStats.chords[nodeId];
+        }
+
+        // Calcula el porcentaje de dominio de un nivel (0 a 100%)
+        function calculateLevelMastery(levelNum) {
+            const lvlObj = EAR_TRAINING_LEVELS.find(l => l.level === levelNum);
+            if (!lvlObj) return 0;
+            const ids = lvlObj.nodeIds;
+            if (!ids || ids.length === 0) return 0;
+
+            let totalScore = 0;
+            ids.forEach(id => {
+                const st = getChordStat(id);
+                // Para dominar un acorde se requieren al menos 2 aciertos netos y baja debilidad
+                const progress = Math.min(1, st.correct / 2) * (st.weakness > 1 ? 0.6 : 1);
+                totalScore += progress;
+            });
+            return Math.round((totalScore / ids.length) * 100);
+        }
+
         let activeFilters = {
             diatonic: true,
             subV_main: false,
@@ -786,7 +993,6 @@
             return ((base % 12) + 12) % 12;
         }
 
-        // Motor de Ortografía Musical Exacta para 1ra, 3ra, 5ta y 7ma del acorde
         function getSpelledChordPCs(rootStr, type) {
             const intervals = chordIntervals[type] || [0, 4, 7, 10];
             const degreeSteps = intervals.length === 4 ? [0, 2, 4, 6] : [0, 2, 4];
@@ -832,7 +1038,6 @@
             });
         }
 
-        // Calcula la novena (mayor o b9) con ortografía correcta para el modo de Tensiones Jazz/Neo-Soul
         function getSpelledNinthPC(rootStr, isFlatNine = false) {
             const cleanRoot = rootStr;
             const rootLetter = cleanRoot.charAt(0).toUpperCase();
@@ -858,7 +1063,6 @@
             return (isFlatNine || cleanRoot.includes('b')) ? flatScale[targetSemi] : sharpScale[targetSemi];
         }
 
-        // Devuelve las 4 clases de altura para las voces superiores (en modo Tensiones reemplaza la fundamental por la 9na o b9)
         function getVoicingPCsForNode(node) {
             const basePCs = getSpelledChordPCs(node.name, node.type);
             if (!harmonicExtensionsEnabled) {
@@ -896,7 +1100,6 @@
             return { upperPCs: basePCs, fullPCs: basePCs, extLabel: node.type || '' };
         }
 
-        // Rota hacia arriba (+1) o hacia abajo (-1) la posición melódica de un voicing de 4 voces
         function rotateUpperVoicing(midiVoices, direction = 1) {
             if (!midiVoices || midiVoices.length < 2) return midiVoices;
             let v = [...midiVoices].sort((a, b) => a - b);
@@ -914,7 +1117,6 @@
             return v.sort((a, b) => a - b);
         }
 
-        // Detecta qué notas MIDI (o clases de altura) se mantuvieron como notas comunes entre dos acordes consecutivos
         function getCommonTonesBetween(prevUpperMidi, currUpperMidi, currChordPCs) {
             if (!prevUpperMidi || !currUpperMidi || prevUpperMidi.length === 0) {
                 return { commonMidi: [], commonNames: [] };
@@ -964,11 +1166,10 @@
             return result;
         }
 
-        // Genera un acorde cerrado limpio alrededor del registro central (C4 - G5)
         function generateInitialVoicing(targetPCs) { 
             let basePcs = targetPCs.map(getMidiIdx); 
             let voicing = []; 
-            let currentMidi = 60; // C4 base
+            let currentMidi = 60;
             for(let i = 0; i < basePcs.length; i++) { 
                 let pc = basePcs[i]; 
                 let oct = Math.floor(currentMidi / 12); 
@@ -1443,7 +1644,6 @@
             const dimSubMainRoot = getSpelledChordPCs(r.bII, '7')[1];
 
             let globalNodes = {
-                // NÚCLEO DIATÓNICO (Coordenadas exactas de la imagen)
                 'Imaj7':   { id: 'Imaj7',   filterCat: 'diatonic', name: r.I,   type: 'maj7',   notes: getNotesForChord(r.I, 'maj7'),   color: 'emerald', format: 'node-tonic-core', deg: 'Imaj7',   ...getSavedPos('Imaj7', 47.0, 62.5) },
                 'VIm7':    { id: 'VIm7',    filterCat: 'diatonic', name: r.VI,  type: 'm7',     notes: getNotesForChord(r.VI, 'm7'),    color: 'emerald', format: 'node-main',       deg: 'VIm7',    ...getSavedPos('VIm7', 55.2, 69.2) },
                 'IIIm7':   { id: 'IIIm7',   filterCat: 'diatonic', name: r.III, type: 'm7',     notes: getNotesForChord(r.III, 'm7'),   color: 'emerald', format: 'node-main',       deg: 'IIIm7',   ...getSavedPos('IIIm7', 65.5, 73.5) },
@@ -1452,16 +1652,13 @@
                 'V7':      { id: 'V7',      filterCat: 'diatonic', name: r.V,   type: '7',      notes: getNotesForChord(r.V, '7'),      color: 'red',     format: 'node-main',       deg: 'V7',      ...getSavedPos('V7', 56.4, 41.2) },
                 'VIIm7b5': { id: 'VIIm7b5', filterCat: 'diatonic', name: r.VII, type: 'm7(b5)', notes: getNotesForChord(r.VII, 'm7(b5)'),color: 'orange',  format: 'node-main',       deg: 'VIIm7(b5)',...getSavedPos('VIIm7b5', 58.6, 50.2) },
 
-                // TÓNICA MENOR (INTERCAMBIO MODAL)
                 'Im7':      { id: 'Im7',      filterCat: 'mod_tonic', name: r.I,    type: 'm7',   notes: getNotesForChord(r.I, 'm7'),      color: 'teal', format: 'node-prep', deg: 'Im7',      ...getSavedPos('Im7', 38.2, 78.2) },
                 'bIIImaj7': { id: 'bIIImaj7', filterCat: 'mod_tonic', name: r.bIII, type: 'maj7', notes: getNotesForChord(r.bIII, 'maj7'), color: 'teal', format: 'node-prep', deg: 'bIIImaj7', ...getSavedPos('bIIImaj7', 47.0, 71.2) },
 
-                // SUSTITUTO TRITONAL DEL I (Y SUS SATÉLITES)
                 'SubV7':    { id: 'SubV7',    filterCat: 'subV_main', satType: 'subv',  name: r.bII,          type: '7',      notes: getNotesForChord(r.bII, '7'),          color: 'red',     format: 'node-prep', deg: 'subV7',         ...getSavedPos('SubV7', 51.5, 52.0) },
                 'SubIIm7':  { id: 'SubIIm7',  filterCat: 'subV_main', satType: 'subii', name: r.bVI,          type: 'm7',     notes: getNotesForChord(r.bVI, 'm7'),         color: 'fuchsia', format: 'node-prep', deg: 'subIIm7',       ...getSavedPos('SubIIm7', 50.8, 43.5) },
                 'DimSubV':  { id: 'DimSubV',  filterCat: 'subV_main', satType: 'dim',   name: dimSubMainRoot, type: 'm7(b5)', notes: getNotesForChord(dimSubMainRoot, 'm7(b5)'), color: 'orange', format: 'node-prep', deg: 'VIIm7(b5)/subV', ...getSavedPos('DimSubV', 44.5, 51.5) },
 
-                // INTERCAMBIO MODAL SUBDOMINANTE MENOR (Abanico Izquierdo)
                 'IVm7':         { ...modalData[0], format: 'node-prep', ...getSavedPos('IVm7', 29.0, 52.2) },
                 'bVImaj7':      { ...modalData[1], format: 'node-prep', ...getSavedPos('bVImaj7', 24.3, 56.8) },
                 'bVII7':        { ...modalData[2], format: 'node-prep', ...getSavedPos('bVII7', 20.2, 62.5) },
@@ -1842,7 +2039,6 @@
             renderTimelineUI();
         }
 
-        // Permite rotar manualmente la posición melódica (soprano) de un acorde en la línea de tiempo y recalcular el enlace en cascada
         window.rotateChordVoicingInTimeline = function(index, direction) {
             if (!currentProgression[index]) return;
             currentProgression[index].voiceRotation = (currentProgression[index].voiceRotation || 0) + direction;
@@ -2273,7 +2469,7 @@
             applyZoomTransform(currentZoom + delta);
         };
 
-        window.centerMapCamera = function(smooth = true) {
+        window.centerMapCamera = function(smooth = true, targetPercentX = 0.48, targetPercentY = 0.50) {
             const scrollArea = document.getElementById('scrollArea');
             const wrapper = document.getElementById('zoomWrapper');
             const sizer = document.getElementById('zoomSizer');
@@ -2289,11 +2485,10 @@
                 badge.textContent = `${Math.round(currentZoom * 100)}%`;
             }
 
-            // Centramos alrededor del núcleo ( ~48% en X y ~52% en Y )
             const scaledW = BASE_MAP_WIDTH * currentZoom;
             const scaledH = BASE_MAP_HEIGHT * currentZoom;
-            const targetX = Math.max(0, (scaledW * 0.48) - (scrollArea.clientWidth / 2));
-            const targetY = Math.max(0, (scaledH * 0.50) - (scrollArea.clientHeight / 2));
+            const targetX = Math.max(0, (scaledW * targetPercentX) - (scrollArea.clientWidth / 2));
+            const targetY = Math.max(0, (scaledH * targetPercentY) - (scrollArea.clientHeight / 2));
 
             scrollArea.scrollTo({
                 left: targetX,
@@ -2366,7 +2561,6 @@
             const scrollArea = document.getElementById('scrollArea');
             if (!scrollArea) return;
 
-            // Zoom con rueda de ratón o trackpad en PC/Mac
             scrollArea.addEventListener('wheel', (e) => {
                 if (e.ctrlKey || e.metaKey) {
                     e.preventDefault();
@@ -2375,7 +2569,6 @@
                 }
             }, { passive: false });
 
-            // Zoom Multitáctil con 2 dedos (Pinch-to-Zoom) en Celulares y Tablets
             let isPinching = false;
             let initialPinchDistance = 0;
             let initialPinchZoom = currentZoom;
@@ -2436,12 +2629,34 @@
             }, 2400);
         }
 
-        window.openHelpModal = function() {
+        window.openHelpModal = function(defaultTab = 'ear_balance') {
+            renderEarTrainingBalanceUI();
+            switchHelpTab(defaultTab);
             document.getElementById('helpModal')?.classList.remove('hidden');
         };
 
         window.closeHelpModal = function() {
             document.getElementById('helpModal')?.classList.add('hidden');
+        };
+
+        window.switchHelpTab = function(tabName) {
+            const btnBalance = document.getElementById('helpTabBtn_balance');
+            const btnGuide = document.getElementById('helpTabBtn_guide');
+            const contentBalance = document.getElementById('helpTabContent_balance');
+            const contentGuide = document.getElementById('helpTabContent_guide');
+
+            if (tabName === 'guide') {
+                contentBalance.classList.add('hidden');
+                contentGuide.classList.remove('hidden');
+                btnGuide.className = 'py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-indigo-600 dark:text-amber-300 shadow-sm';
+                btnBalance.className = 'py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900';
+            } else {
+                renderEarTrainingBalanceUI();
+                contentGuide.classList.add('hidden');
+                contentBalance.classList.remove('hidden');
+                btnBalance.className = 'py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-indigo-600 dark:text-amber-300 shadow-sm';
+                btnGuide.className = 'py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900';
+            }
         };
 
         window.closeInteractiveVLModal = function() {
@@ -2500,7 +2715,151 @@
             pushToProgression(node, bassMidi, upperMidiVoices, slashName, chordPCs, chosenBassStep, commonInfo);
         }
 
-        // ==================== MODO ENTRENAMIENTO AUDITIVO (EAR TRAINING QUIZ) ====================
+        // ==================== MOTOR DE ENTRENAMIENTO AUDITIVO ADAPTATIVO (EAR TRAINING QUIZ) ====================
+
+        function ensureFiltersForQuizLevel(levelNum) {
+            const lvlObj = EAR_TRAINING_LEVELS.find(l => l.level === levelNum) || EAR_TRAINING_LEVELS[0];
+            if (currentCategory !== 'global') {
+                currentCategory = 'global';
+                currentVariation = 'all';
+                renderSidebar();
+            }
+            if (lvlObj.requiredFilters) {
+                Object.keys(lvlObj.requiredFilters).forEach(fk => {
+                    activeFilters[fk] = true;
+                    const cb = document.getElementById('f_' + fk);
+                    if (cb) cb.checked = true;
+                });
+            }
+            renderDiagram();
+        }
+
+        window.changeQuizLevel = function(val) {
+            const lvl = parseInt(val, 10) || 1;
+            earStats.currentLevel = lvl;
+            if (lvl > earStats.unlockedLevel) earStats.unlockedLevel = lvl;
+            saveEarStats();
+            ensureFiltersForQuizLevel(lvl);
+            updateQuizTopBarStats();
+            if (earQuizActive) {
+                startNewQuizRound();
+            }
+        };
+
+        window.toggleQuizWeakFocusMode = function() {
+            quizWeakFocusEnabled = !quizWeakFocusEnabled;
+            const btn = document.getElementById('quizWeakFocusBtn');
+            const lbl = document.getElementById('quizWeakFocusLabel');
+            if (quizWeakFocusEnabled) {
+                btn.className = 'px-2 py-1 rounded-lg text-[9px] font-black border transition flex items-center gap-1 bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800';
+                lbl.textContent = 'Atacar Debilidades: ON';
+            } else {
+                btn.className = 'px-2 py-1 rounded-lg text-[9px] font-bold border transition flex items-center gap-1 bg-slate-100 text-slate-500 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+                lbl.textContent = 'Atacar Debilidades: OFF';
+            }
+        };
+
+        function updateQuizTopBarStats() {
+            const lvlSelect = document.getElementById('quizLevelSelect');
+            if (lvlSelect) lvlSelect.value = String(earStats.currentLevel);
+
+            const mastery = calculateLevelMastery(earStats.currentLevel);
+            const mEl = document.getElementById('quizLevelMasteryVal');
+            if (mEl) mEl.textContent = `${mastery}%`;
+
+            const sEl = document.getElementById('quizStreakVal');
+            if (sEl) sEl.textContent = String(quizStreak);
+
+            // Contar acordes débiles activos
+            const weakList = getWeakChordIdsList();
+            const weakBadge = document.getElementById('quizWeakCounterBadge');
+            if (weakBadge) {
+                if (weakList.length > 0) {
+                    weakBadge.classList.remove('hidden');
+                    weakBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${weakList.length} acorde(s) por reforzar`;
+                } else {
+                    weakBadge.classList.add('hidden');
+                }
+            }
+
+            // Desbloqueo automático al alcanzar >= 80% de dominio del nivel actual
+            if (mastery >= 80 && earStats.currentLevel < EAR_TRAINING_LEVELS.length) {
+                const nextLvl = earStats.currentLevel + 1;
+                if (earStats.unlockedLevel < nextLvl) {
+                    earStats.unlockedLevel = nextLvl;
+                    saveEarStats();
+                    showToast(`🎉 ¡Dominaste el Nivel ${earStats.currentLevel}! Nivel ${nextLvl} desbloqueado.`);
+                }
+            }
+        }
+
+        function getWeakChordIdsList() {
+            return Object.keys(earStats.chords).filter(id => earStats.chords[id].weakness > 0)
+                .sort((a, b) => earStats.chords[b].weakness - earStats.chords[a].weakness);
+        }
+
+        // Selección ponderada inteligente: prioriza debilidades y acordes menos practicados del nivel actual (y niveles previos)
+        function pickWeightedQuizCandidate() {
+            const globalNodes = theoryData.global?.variations[0]?.nodes || {};
+            const lvlObj = EAR_TRAINING_LEVELS.find(l => l.level === earStats.currentLevel) || EAR_TRAINING_LEVELS[0];
+            const poolIds = new Set(lvlObj.cumulativeIds || lvlObj.nodeIds);
+
+            // Si "Atacar Debilidades" está activo, incluimos también cualquier acorde débil de niveles previos o actuales
+            if (quizWeakFocusEnabled) {
+                getWeakChordIdsList().forEach(wId => {
+                    if (globalNodes[wId] && isNodeVisible(globalNodes[wId])) {
+                        poolIds.add(wId);
+                    }
+                });
+            }
+
+            let candidates = Array.from(poolIds)
+                .map(id => globalNodes[id])
+                .filter(n => n && isNodeVisible(n));
+
+            if (candidates.length === 0) {
+                candidates = Object.values(globalNodes).filter(n => isNodeVisible(n));
+            }
+            if (candidates.length === 0) return null;
+
+            if (candidates.length > 1 && quizTargetNode) {
+                candidates = candidates.filter(n => n.id !== quizTargetNode.id);
+            }
+
+            // Calculamos pesos adaptativos para cada acorde candidato
+            const weights = candidates.map(node => {
+                const st = getChordStat(node.id);
+                let w = 10; // Peso base
+
+                // Si pertenece directamente al foco del nivel actual, darle prioridad
+                if (lvlObj.nodeIds.includes(node.id)) w += 12;
+
+                if (quizWeakFocusEnabled) {
+                    // Cada punto de debilidad (errores o respuestas mostradas) multiplica fuertemente su probabilidad
+                    if (st.weakness > 0) {
+                        w += st.weakness * 28;
+                    }
+                    // Si aún no ha sido acertado al menos 2 veces, priorizarlo
+                    if (st.correct < 2) {
+                        w += (2 - st.correct) * 10;
+                    }
+                    // Si ya tiene una racha alta sin debilidad, reducir su frecuencia para no aburrir
+                    if (st.streak >= 3 && st.weakness === 0) {
+                        w = Math.max(3, Math.floor(w * 0.35));
+                    }
+                }
+                return w;
+            });
+
+            const totalWeight = weights.reduce((acc, val) => acc + val, 0);
+            let rnd = Math.random() * totalWeight;
+            for (let i = 0; i < candidates.length; i++) {
+                rnd -= weights[i];
+                if (rnd <= 0) return candidates[i];
+            }
+            return candidates[candidates.length - 1];
+        }
+
         window.toggleEarQuizMode = async function() {
             earQuizActive = !earQuizActive;
             const panel = document.getElementById('earQuizPanel');
@@ -2509,22 +2868,19 @@
             if (earQuizActive) {
                 panel.classList.remove('hidden');
                 headerBtn.className = 'px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-500 text-white border border-amber-600 shadow-md transition';
+                ensureFiltersForQuizLevel(earStats.currentLevel);
+                updateQuizTopBarStats();
                 if (!isAudioInitialized) await toggleMasterAudio();
                 startNewQuizRound();
             } else {
                 panel.classList.add('hidden');
                 headerBtn.className = 'px-2.5 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1.5 bg-amber-50 text-amber-700 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 transition shadow-sm';
-                document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node').forEach(el => {
-                    el.classList.remove('quiz-correct-node', 'quiz-wrong-node');
+                document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node, .quiz-revealed-node').forEach(el => {
+                    el.classList.remove('quiz-correct-node', 'quiz-wrong-node', 'quiz-revealed-node');
                 });
                 quizTargetNode = null;
             }
         };
-
-        function getVisibleCandidateNodesForQuiz() {
-            const globalNodes = theoryData.global?.variations[0]?.nodes || {};
-            return Object.values(globalNodes).filter(n => isNodeVisible(n));
-        }
 
         function playNodeForQuiz(node) {
             if (!node) return;
@@ -2533,7 +2889,6 @@
             const upperMidi = generateInitialVoicing(voicingInfo.upperPCs);
             const bassMidi = 36 + getMidiIdx(basePcs[0]);
             const allNotes = [bassMidi, ...upperMidi].map(m => Tone.Frequency(m, "midi").toNote());
-            // En modo Quiz no iluminamos el teclado para no revelar visualmente la respuesta antes de adivinar
             if (isAudioInitialized && synth) {
                 const now = Tone.now();
                 synth.releaseAll();
@@ -2547,7 +2902,7 @@
             if (tonicNode) {
                 playNodeForQuiz(tonicNode);
                 const statusEl = document.getElementById('quizStatusText');
-                if (statusEl) statusEl.textContent = `Referencia Tónica: ${tonicNode.name}maj7 (Imaj7). Ahora escucha el acorde misterioso.`;
+                if (statusEl) statusEl.textContent = `Referencia Tónica: ${tonicNode.name}maj7 (Imaj7). Escucha el reto y encuéntralo en el mapa.`;
             }
         };
 
@@ -2560,25 +2915,67 @@
             playNodeForQuiz(quizTargetNode);
         };
 
-        window.startNewQuizRound = async function() {
+        // Botón "Mostrar Respuesta": revela el acorde en el mapa, centra la cámara, muestra sus notas en el piano y lo agenda como debilidad
+        window.revealQuizAnswer = async function() {
+            if (!quizTargetNode) return;
             if (!isAudioInitialized) await toggleMasterAudio();
-            document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node').forEach(el => {
-                el.classList.remove('quiz-correct-node', 'quiz-wrong-node');
+
+            const st = getChordStat(quizTargetNode.id);
+            if (!quizRoundSolved) {
+                st.attempts++;
+                st.revealed++;
+                st.streak = 0;
+                st.weakness = Math.min(10, st.weakness + 3); // Alta prioridad para repasarlo
+                earStats.totalAttempts++;
+                quizStreak = 0;
+                quizRoundHadMistakeOrReveal = true;
+                quizRoundSolved = true;
+                saveEarStats();
+                updateQuizTopBarStats();
+            }
+
+            // Iluminar el nodo en el mapa y centrar la cámara suavemente en él
+            document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node, .quiz-revealed-node').forEach(el => {
+                el.classList.remove('quiz-correct-node', 'quiz-wrong-node', 'quiz-revealed-node');
             });
+            const targetEl = document.getElementById(`node-${quizTargetNode.id}`);
+            if (targetEl) {
+                targetEl.classList.add('quiz-revealed-node');
+                centerMapCamera(true, (quizTargetNode.x || 50) / 100, (quizTargetNode.y || 50) / 100);
+            }
 
-            const candidates = getVisibleCandidateNodesForQuiz();
-            if (candidates.length === 0) return;
-
-            let pool = candidates.length > 1 && quizTargetNode
-                ? candidates.filter(n => n.id !== quizTargetNode.id)
-                : candidates;
-
-            quizTargetNode = pool[Math.floor(Math.random() * pool.length)];
-            quizRoundSolved = false;
+            const basePcs = getSpelledChordPCs(quizTargetNode.name, quizTargetNode.type);
+            const voicingInfo = getVoicingPCsForNode(quizTargetNode);
+            const upperMidi = generateInitialVoicing(voicingInfo.upperPCs);
+            highlightPianoKeys(36 + getMidiIdx(basePcs[0]), upperMidi, voicingInfo.fullPCs, []);
+            playNodeForQuiz(quizTargetNode);
 
             const statusEl = document.getElementById('quizStatusText');
             if (statusEl) {
-                statusEl.innerHTML = `<span class="text-indigo-600 dark:text-indigo-400">🔊 Sonando Tónica (I) ➔ Acorde Misterioso...</span> ¡Haz clic en el círculo del mapa que creas que sonó!`;
+                statusEl.innerHTML = `<span class="text-amber-600 dark:text-amber-400 font-black">👁️ Respuesta: ${quizTargetNode.name}${quizTargetNode.type} (${quizTargetNode.deg}).</span> Guardado en tus debilidades para reforzarlo pronto.`;
+            }
+            showToast(`Respuesta: ${quizTargetNode.name}${quizTargetNode.type} (${quizTargetNode.deg}) — Añadido a repaso`);
+        };
+
+        window.startNewQuizRound = async function() {
+            if (!isAudioInitialized) await toggleMasterAudio();
+            document.querySelectorAll('.quiz-correct-node, .quiz-wrong-node, .quiz-revealed-node').forEach(el => {
+                el.classList.remove('quiz-correct-node', 'quiz-wrong-node', 'quiz-revealed-node');
+            });
+
+            quizTargetNode = pickWeightedQuizCandidate();
+            if (!quizTargetNode) return;
+
+            quizRoundSolved = false;
+            quizRoundHadMistakeOrReveal = false;
+
+            const st = getChordStat(quizTargetNode.id);
+            const isWeakTarget = st.weakness > 0;
+            const statusEl = document.getElementById('quizStatusText');
+            if (statusEl) {
+                statusEl.innerHTML = isWeakTarget
+                    ? `<span class="text-rose-600 dark:text-rose-400 font-black">🎯 Reforzando Debilidad:</span> Escucha Tónica (I) ➔ Acorde Misterioso y tócalo en el mapa.`
+                    : `<span class="text-indigo-600 dark:text-indigo-400 font-black">🔊 Tónica (I) ➔ Acorde Misterioso...</span> Toca el círculo que creas que sonó.`;
             }
 
             const tonicNode = theoryData.global?.variations[0]?.nodes['Imaj7'];
@@ -2587,7 +2984,7 @@
                 if (earQuizActive && quizTargetNode) {
                     playNodeForQuiz(quizTargetNode);
                 }
-            }, 950);
+            }, 920);
         };
 
         function handleEarQuizGuess(clickedNode) {
@@ -2595,43 +2992,187 @@
             const el = document.getElementById(`node-${clickedNode.id}`);
             const statusEl = document.getElementById('quizStatusText');
 
-            // Reproducir el acorde que el usuario tocó para que compare auditivamente
             playNodeForQuiz(clickedNode);
 
             if (clickedNode.id === quizTargetNode.id) {
                 if (el) {
-                    el.classList.remove('quiz-wrong-node');
+                    el.classList.remove('quiz-wrong-node', 'quiz-revealed-node');
                     el.classList.add('quiz-correct-node');
                 }
                 if (!quizRoundSolved) {
-                    quizStreak++;
-                    quizCorrectCount++;
-                    quizTotalAttempts++;
+                    const st = getChordStat(quizTargetNode.id);
+                    st.attempts++;
+                    st.correct++;
+                    st.streak++;
+                    earStats.totalAttempts++;
+
+                    if (!quizRoundHadMistakeOrReveal) {
+                        earStats.totalCorrectFirstTry++;
+                        quizStreak++;
+                        // Reducir índice de debilidad progresivamente cuando acierta al primer intento
+                        if (st.weakness > 0) {
+                            st.weakness = Math.max(0, st.weakness - 1);
+                        }
+                    }
                     quizRoundSolved = true;
+                    saveEarStats();
+                    updateQuizTopBarStats();
                 }
+
                 const basePcs = getSpelledChordPCs(clickedNode.name, clickedNode.type);
                 const voicingInfo = getVoicingPCsForNode(clickedNode);
                 const upperMidi = generateInitialVoicing(voicingInfo.upperPCs);
                 highlightPianoKeys(36 + getMidiIdx(basePcs[0]), upperMidi, voicingInfo.fullPCs, []);
 
                 if (statusEl) {
-                    statusEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-black">¡Correcto! 🎉 Era ${clickedNode.name}${clickedNode.type} (${clickedNode.deg}).</span> Presiona "Siguiente Reto" para continuar.`;
+                    statusEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-black">¡Correcto! 🎉 Era ${clickedNode.name}${clickedNode.type} (${clickedNode.deg}).</span> Pulsa "Siguiente" para continuar.`;
                 }
                 showToast(`¡Correcto! ${clickedNode.name}${clickedNode.type} (${clickedNode.deg})`);
             } else {
                 if (el) el.classList.add('quiz-wrong-node');
                 if (!quizRoundSolved) {
+                    const targetStat = getChordStat(quizTargetNode.id);
+                    targetStat.wrong++;
+                    targetStat.streak = 0;
+                    targetStat.weakness = Math.min(10, targetStat.weakness + 2);
+
+                    // También registramos una ligera alerta en el acorde con el que lo confundió
+                    const confusedStat = getChordStat(clickedNode.id);
+                    confusedStat.weakness = Math.min(10, confusedStat.weakness + 1);
+
+                    quizRoundHadMistakeOrReveal = true;
                     quizStreak = 0;
-                    quizTotalAttempts++;
+                    saveEarStats();
+                    updateQuizTopBarStats();
                 }
                 if (statusEl) {
-                    statusEl.innerHTML = `<span class="text-red-600 dark:text-red-400 font-black">Casi... Tocaste ${clickedNode.name}${clickedNode.type} (${clickedNode.deg}).</span> Vuelve a oír el acorde misterioso e intenta de nuevo.`;
+                    statusEl.innerHTML = `<span class="text-red-600 dark:text-red-400 font-black">No es ${clickedNode.name}${clickedNode.type} (${clickedNode.deg}).</span> Compara el sonido o pulsa "Respuesta" para ubicarlo.`;
                 }
             }
-
-            document.getElementById('quizStreakVal').textContent = quizStreak;
-            document.getElementById('quizScoreVal').textContent = `${quizCorrectCount}/${quizTotalAttempts}`;
         }
+
+        // Renderiza el Balance de Avance de Habilidades Auditivas dentro del Modal de Ayuda
+        function renderEarTrainingBalanceUI() {
+            const globalNodes = theoryData.global?.variations[0]?.nodes || {};
+            const allNodeIds = Object.keys(globalNodes);
+
+            const accuracy = earStats.totalAttempts > 0
+                ? Math.round((earStats.totalCorrectFirstTry / earStats.totalAttempts) * 100)
+                : 0;
+
+            let masteredCount = 0;
+            allNodeIds.forEach(id => {
+                const st = earStats.chords[id];
+                if (st && st.correct >= 2 && st.weakness === 0) masteredCount++;
+            });
+
+            const weakIds = getWeakChordIdsList();
+
+            const elLvl = document.getElementById('statCurrentLevel');
+            const elAcc = document.getElementById('statGlobalAccuracy');
+            const elMas = document.getElementById('statMasteredCount');
+            const elWk  = document.getElementById('statWeakCount');
+
+            if (elLvl) elLvl.textContent = `Nivel ${earStats.currentLevel} / 6`;
+            if (elAcc) elAcc.textContent = `${accuracy}%`;
+            if (elMas) elMas.textContent = `${masteredCount} / ${allNodeIds.length}`;
+            if (elWk)  elWk.textContent  = String(weakIds.length);
+
+            const levelsContainer = document.getElementById('earLevelsProgressContainer');
+            if (levelsContainer) {
+                levelsContainer.innerHTML = '';
+                EAR_TRAINING_LEVELS.forEach(lvl => {
+                    const pct = calculateLevelMastery(lvl.level);
+                    const isCurrent = earStats.currentLevel === lvl.level;
+                    const barColor = pct >= 80 ? 'bg-emerald-500' : (pct >= 40 ? 'bg-amber-500' : 'bg-indigo-500');
+
+                    levelsContainer.innerHTML += `
+                        <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border ${isCurrent ? 'border-amber-400 shadow-sm' : 'border-slate-200 dark:border-slate-700'}">
+                            <div class="flex justify-between items-center mb-1 gap-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-black ${isCurrent ? 'bg-amber-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">
+                                        Niv. ${lvl.level}
+                                    </span>
+                                    <span class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">${lvl.title.replace(/^Nivel \d+:\s*/, '')}</span>
+                                </div>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span class="text-[10px] font-black text-slate-600 dark:text-slate-300">${pct}%</span>
+                                    <button onclick="selectQuizLevelFromModal(${lvl.level})" class="px-2 py-0.5 rounded-lg text-[9px] font-black bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white dark:bg-indigo-950/70 dark:text-indigo-300 transition">
+                                        Practicar
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1.5">${lvl.desc}</p>
+                            <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full ${barColor} transition-all duration-300" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            const weakContainer = document.getElementById('weakChordsListContainer');
+            if (weakContainer) {
+                if (weakIds.length === 0) {
+                    weakContainer.innerHTML = `<span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i> ¡Excelente! No tienes acordes pendientes en tu lista de debilidades.</span>`;
+                } else {
+                    weakContainer.innerHTML = '';
+                    weakIds.forEach(id => {
+                        const node = globalNodes[id];
+                        const st = earStats.chords[id];
+                        if (!node || !st) return;
+                        weakContainer.innerHTML += `
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 flex items-center gap-1.5 shadow-sm">
+                                <span>${node.name}${node.type} <strong class="opacity-75">(${node.deg})</strong></span>
+                                <span class="px-1.5 py-0.2 rounded-full bg-rose-100 dark:bg-rose-950 text-[8px]">Prioridad x${st.weakness}</span>
+                            </span>
+                        `;
+                    });
+                }
+            }
+        }
+
+        window.selectQuizLevelFromModal = function(lvl) {
+            closeHelpModal();
+            earStats.currentLevel = lvl;
+            saveEarStats();
+            if (!earQuizActive) {
+                toggleEarQuizMode();
+            } else {
+                changeQuizLevel(lvl);
+            }
+        };
+
+        window.startWeaknessDrillFromModal = function() {
+            closeHelpModal();
+            quizWeakFocusEnabled = true;
+            const btn = document.getElementById('quizWeakFocusBtn');
+            const lbl = document.getElementById('quizWeakFocusLabel');
+            if (btn && lbl) {
+                btn.className = 'px-2 py-1 rounded-lg text-[9px] font-black border transition flex items-center gap-1 bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800';
+                lbl.textContent = 'Atacar Debilidades: ON';
+            }
+            if (!earQuizActive) {
+                toggleEarQuizMode();
+            } else {
+                startNewQuizRound();
+            }
+        };
+
+        window.resetEarTrainingStats = function() {
+            earStats = {
+                currentLevel: 1,
+                unlockedLevel: 1,
+                totalAttempts: 0,
+                totalCorrectFirstTry: 0,
+                chords: {}
+            };
+            quizStreak = 0;
+            saveEarStats();
+            renderEarTrainingBalanceUI();
+            updateQuizTopBarStats();
+            showToast('Historial auditivo reiniciado a Nivel 1');
+        };
 
         window.addNodeToTimeline = function(nodeId, fallbackName, fallbackColor, fallbackNotesStr, silent = false) {
             if(isDraggingNode) return; 
@@ -2646,7 +3187,6 @@
             };
             if(!node) return;
 
-            // Si el Modo Quiz Auditivo está activo y el clic no viene de un preset silencioso, evaluamos la respuesta
             if (!silent && earQuizActive) {
                 handleEarQuizGuess(node);
                 return;
@@ -2770,7 +3310,6 @@
             }
             container.innerHTML = '';
             currentProgression.forEach((chord, i) => {
-                // Conector visual de Notas Comunes entre acordes
                 if (i > 0) {
                     const hasCommon = chord.commonNames && chord.commonNames.length > 0;
                     const badgeTitle = hasCommon
@@ -2956,9 +3495,9 @@
 
         window.addEventListener('resize', () => { requestAnimationFrame(drawLines); });
         window.onload = () => {
+            loadEarStats();
             initPianoKeyboard();
             initCameraGestures();
-            // En celulares iniciamos con un zoom panorámico (52%) y el menú lateral plegado para ver el mapa de inmediato
             if (window.innerWidth < 768) {
                 currentZoom = 0.52;
                 const sidebar = document.getElementById('appSidebar');
